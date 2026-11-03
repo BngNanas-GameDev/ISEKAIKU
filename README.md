@@ -134,10 +134,23 @@ tools/
   tls_http_probe.dart     # diagnostik: TLS handshake + HTTP/1.1 mentah
   sni_probe.dart          # diagnostik: deteksi blokir berbasis SNI
   mock_mangadex.py        # server tiruan MangaDex untuk uji UI offline
+  api_probe.dart          # diagnostik: filter API MangaDex (chapter, bahasa)
+  chapters_probe.dart     # diagnostik: jumlah chapter per judul
+supabase/
+  migrations/             # skema Postgres + RLS + trigger moderasi
+docs/
+  supabase-setup.md       # panduan setup akun, RLS, keep-alive free tier
 test/
   doh_resolver_test.dart  # unit test parser + provider DoH
   mangadex_mapper_test.dart
   manga_test.dart
+  chapter_availability_test.dart
+  chapter_range_test.dart
+  library_store_test.dart
+  library_page_test.dart
+  library_backup_test.dart
+  reading_progress_test.dart
+  content_moderation_test.dart
   widget_test.dart        # smoke test tema & wordmark
 ```
 
@@ -161,15 +174,38 @@ sehingga tampil di halaman lisensi aplikasi.
 
 ## Roadmap
 
+Manga-first sampai rilis. Anime ditunda sampai aplikasi terbukti dipakai.
+
 - [x] M0 Skeleton, design system, wordmark, preview web
 - [x] M1 MangaDex: browse populer/terbaru, search, detail, chapter list, reader
       (paged + webtoon, prefetch, hemat kuota), error state informatif
-- [x] M2 Follow lokal, riwayat baca, pengaturan reader persisten, library
-      (StorageService + provider persisten, Pustaka 2 tab, tombol ikuti di
-      detail, riwayat otomatis di reader)
-- [ ] M3 Gofile provider, koleksi anime manual, fallback WebView
-- [ ] M4 Player media_kit: resume, gesture, subtitle, kecepatan
-- [ ] M5 Polish, ikon adaptif, splash, release signing
+- [x] M2 Pustaka lokal: follow, riwayat baca, setting reader persisten, DoH
+      (StorageService + provider persisten, Pustaka 2 tab, tombol ikuti,
+      riwayat otomatis di reader)
+- [x] M3 Kedalaman baca: progres halaman, kartu "Lanjut baca", badge rentang
+      chapter + Lengkap, sembunyikan judul tanpa chapter, bahasa ketat,
+      ekspor/impor Pustaka, filter moderasi
+- [ ] M4 Import koleksi lokal (folder/CBZ), jelajah genre/filter, riwayat
+      pencarian, urutkan Pustaka
+- [ ] M5 Rilis: skeleton/empty state, hemat data, lokalisasi, ikon adaptif,
+      splash, release signing, QA
+- [ ] M6 (pasca-rilis) Akun Supabase + sinkronisasi Pustaka
+- [ ] M7 (pasca-rilis) Komentar/forum per manga
+- [ ] M8 (ditunda) Anime: koleksi lokal, provider video, player media_kit
+
+## Akun & sinkronisasi (persiapan)
+
+Skema backend opsional ada di `supabase/migrations/0001_schema.sql`: profil,
+Pustaka, progres baca, chapter terbaca, komentar, laporan, dan blokir —
+lengkap dengan **RLS** dan **trigger moderasi** server-side.
+
+Panduan langkah demi langkah (login Google, SHA-1 debug/release, dan
+keep-alive free tier lewat cron-job.org): `docs/supabase-setup.md`.
+
+Aplikasi tetap **local-first**: tanpa login, semua fitur baca tetap jalan.
+
+Backup manual: **Pustaka → Backup Pustaka → Ekspor ke clipboard** (impor
+bersifat menggabungkan, jadi aman diulang).
 
 ## Catatan kepatuhan
 
