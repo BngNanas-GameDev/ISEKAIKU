@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../manga/presentation/widgets/manga_card.dart';
+import '../data/library_backup.dart';
 import '../data/models/library_models.dart';
 import '../library_providers.dart';
 
@@ -33,6 +35,26 @@ class LibraryPage extends ConsumerWidget {
                 icon: const Icon(Icons.delete_sweep_outlined),
                 onPressed: () => _confirmClearHistory(context, ref),
               ),
+            PopupMenuButton<String>(
+              tooltip: 'Backup Pustaka',
+              onSelected: (value) {
+                if (value == 'export') {
+                  _export(context, ref);
+                } else if (value == 'import') {
+                  _import(context, ref);
+                }
+              },
+              itemBuilder: (context) => const <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'export',
+                  child: Text('Ekspor ke clipboard'),
+                ),
+                PopupMenuItem<String>(
+                  value: 'import',
+                  child: Text('Impor dari clipboard'),
+                ),
+              ],
+            ),
           ],
           bottom: TabBar(
             indicatorColor: AppColors.primary,
@@ -82,6 +104,146 @@ class LibraryPage extends ConsumerWidget {
     if (confirmed == true) {
       ref.read(readingHistoryProvider.notifier).clear();
     }
+  }
+
+  Future<void> _export(BuildContext context, WidgetRef ref) async {
+    final backup = ref.read(libraryBackupServiceProvider).export();
+    await Clipboard.setData(ClipboardData(text: backup.encode()));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            'Backup disalin: ${backup.followed.length} diikuti, '
+            '${backup.history.length} riwayat.',
+          ),
+        ),
+      );
+  }
+
+  Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final raw = await showDialog<String>(
+      context: context,
+      builder: (context) => const _ImportDialog(),
+    );
+    if (raw == null || raw.trim().isEmpty) return;
+
+    try {
+      final summary = await ref.read(libraryBackupServiceProvider).import(raw);
+      ref.read(followedMangaProvider.notifier).reload();
+      ref.read(readingHistoryProvider.notifier).reload();
+      ref.read(readChaptersProvider.notifier).reload();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Impor selesai: ${summary.followed} diikuti, '
+              '${summary.history} riwayat.',
+            ),
+          ),
+        );
+    } on FormatException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+}
+
+class _ImportDialog extends StatefulWidget {
+  const _ImportDialog();
+
+  @override
+  State<_ImportDialog> createState() => _ImportDialogState();
+}
+
+class _ImportDialogState extends State<_ImportDialog> {
+  final TextEditingController _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _paste() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text ?? '';
+    if (text.isEmpty) {
+      setState(() => _error = 'Clipboard kosong.');
+      return;
+    }
+    _controller.text = text;
+    setState(() => _error = null);
+  }
+
+  void _submit() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      setState(() => _error = 'Tempel teks backup terlebih dahulu.');
+      return;
+    }
+    if (LibraryBackup.decode(text) == null) {
+      setState(() => _error = 'Teks bukan backup Isekaiku yang valid.');
+      return;
+    }
+    Navigator.of(context).pop(text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceContainer,
+      title: const Text('Impor Pustaka', style: AppTypography.titleMedium),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Tempel teks backup yang diekspor dari aplikasi ini. Data akan '
+              'digabungkan, bukan menimpa.',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.m),
+            TextField(
+              controller: _controller,
+              minLines: 4,
+              maxLines: 8,
+              style: AppTypography.labelSmall,
+              decoration: InputDecoration(
+                hintText: '{"app":"isekaiku", ...}',
+                errorText: _error,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s),
+            TextButton.icon(
+              onPressed: _paste,
+              icon: const Icon(Icons.content_paste, size: 18),
+              label: const Text('Tempel dari clipboard'),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Impor'),
+        ),
+      ],
+    );
   }
 }
 

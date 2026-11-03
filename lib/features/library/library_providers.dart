@@ -1,11 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/storage_providers.dart';
+import 'data/library_backup.dart';
 import 'data/library_store.dart';
 import 'data/models/library_models.dart';
 
 final libraryStoreProvider = Provider<LibraryStore>(
   (ref) => LibraryStore(ref.watch(storageServiceProvider)),
+);
+
+final libraryBackupServiceProvider = Provider<LibraryBackupService>(
+  (ref) => LibraryBackupService(ref.watch(libraryStoreProvider)),
 );
 
 /// Daftar manga yang diikuti, urut dari yang terbaru.
@@ -29,6 +34,11 @@ class FollowedNotifier extends StateNotifier<List<FollowedManga>> {
   void remove(String mangaId) {
     state = state.where((e) => e.id != mangaId).toList();
     _store.saveFollowed(state);
+  }
+
+  /// Muat ulang dari penyimpanan (dipakai setelah impor backup).
+  void reload() {
+    state = _store.loadFollowed();
   }
 }
 
@@ -79,6 +89,11 @@ class HistoryNotifier extends StateNotifier<List<ReadingHistoryEntry>> {
     }
     return null;
   }
+
+  /// Muat ulang dari penyimpanan (dipakai setelah impor backup).
+  void reload() {
+    state = _store.loadHistory();
+  }
 }
 
 final readingHistoryProvider =
@@ -122,6 +137,11 @@ class ReadChaptersNotifier extends StateNotifier<Map<String, Set<String>>> {
     if (!state.containsKey(mangaId)) return;
     final next = Map<String, Set<String>>.of(state)..remove(mangaId);
     _commit(next);
+  }
+
+  /// Muat ulang dari penyimpanan (dipakai setelah impor backup).
+  void reload() {
+    state = _store.loadReadChapters();
   }
 
   void _commit(Map<String, Set<String>> next) {
