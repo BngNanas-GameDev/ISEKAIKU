@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'core/licensing.dart';
 import 'core/network/doh/doh_http_overrides.dart';
+import 'core/storage/storage_providers.dart';
+import 'core/storage/storage_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // DNS-over-HTTPS dipasang lebih dulu supaya semua HttpClient (Dio,
@@ -18,5 +20,16 @@ void main() {
   HttpOverrides.global = DohHttpOverrides(enabled: !disableDoh);
 
   registerAppLicenses();
-  runApp(const ProviderScope(child: IsekaikuApp()));
+
+  // Penyimpanan lokal dibuka sekali di sini lalu dibagikan lewat provider.
+  final StorageService storage = await StorageService.create();
+
+  runApp(
+    ProviderScope(
+      overrides: <Override>[
+        storageServiceProvider.overrideWithValue(storage),
+      ],
+      child: const IsekaikuApp(),
+    ),
+  );
 }

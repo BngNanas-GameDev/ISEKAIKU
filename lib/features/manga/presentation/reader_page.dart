@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../library/data/models/library_models.dart';
+import '../../library/library_providers.dart';
 import '../data/models/manga.dart';
 import '../manga_providers.dart';
 import 'widgets/manga_card.dart';
@@ -33,6 +35,39 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _chromeVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Catat riwayat setelah frame pertama supaya tidak menahan render.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _recordHistory());
+  }
+
+  /// Simpan chapter ini sebagai progres terakhir manga tsb.
+  Future<void> _recordHistory() async {
+    if (!mounted) return;
+
+    Manga? detail;
+    try {
+      detail = await ref.read(mangaDetailProvider(widget.mangaId).future);
+    } catch (_) {
+      // Judul/cover saja yang hilang; riwayat tetap dicatat.
+      detail = null;
+    }
+    if (!mounted) return;
+
+    ref.read(readingHistoryProvider.notifier).record(
+          ReadingHistoryEntry(
+            mangaId: widget.mangaId,
+            mangaTitle: detail?.title ?? '',
+            coverUrl: detail?.coverUrl,
+            chapterId: widget.chapterId,
+            chapterNumber: widget.chapterNumber,
+            chapterTitle: widget.chapterTitle,
+            readAt: DateTime.now(),
+          ),
+        );
+  }
 
   @override
   void dispose() {
@@ -180,7 +215,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                   value: webtoon,
                   activeThumbColor: AppColors.primary,
                   onChanged: (value) =>
-                      ref.read(webtoonModeProvider.notifier).state = value,
+                      ref.read(webtoonModeProvider.notifier).set(value),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -192,7 +227,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                   value: saver,
                   activeThumbColor: AppColors.primary,
                   onChanged: (value) =>
-                      ref.read(dataSaverProvider.notifier).state = value,
+                      ref.read(dataSaverProvider.notifier).set(value),
                 ),
               ],
             ),

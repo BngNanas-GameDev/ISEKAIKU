@@ -1,18 +1,50 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/storage/storage_providers.dart';
 import 'data/mangadex_api.dart';
 import 'data/models/manga.dart';
 
 final mangaDexApiProvider = Provider<MangaDexApi>((ref) => MangaDexApi());
 
+/// Kunci penyimpanan setting reader.
+const String readerLanguageKey = 'reader.chapterLanguage';
+const String readerDataSaverKey = 'reader.dataSaver';
+const String readerWebtoonKey = 'reader.webtoon';
+
 /// Bahasa chapter yang diminta (id, lalu fallback en).
-final chapterLanguageProvider = StateProvider<String>((ref) => 'id');
+///
+/// Persisten: pilihan terakhir dipakai lagi saat aplikasi dibuka ulang.
+final chapterLanguageProvider =
+    StateNotifierProvider<PersistentStringNotifier, String>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return PersistentStringNotifier(
+    storage,
+    readerLanguageKey,
+    storage.getString(readerLanguageKey, fallback: 'id'),
+  );
+});
 
 /// Kualitas gambar reader: true = data-saver (hemat kuota).
-final dataSaverProvider = StateProvider<bool>((ref) => true);
+final dataSaverProvider =
+    StateNotifierProvider<PersistentBoolNotifier, bool>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return PersistentBoolNotifier(
+    storage,
+    readerDataSaverKey,
+    storage.getBool(readerDataSaverKey, fallback: true),
+  );
+});
 
 /// Mode reader: true = webtoon (scroll vertikal), false = paged.
-final webtoonModeProvider = StateProvider<bool>((ref) => false);
+final webtoonModeProvider =
+    StateNotifierProvider<PersistentBoolNotifier, bool>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return PersistentBoolNotifier(
+    storage,
+    readerWebtoonKey,
+    storage.getBool(readerWebtoonKey, fallback: false),
+  );
+});
 
 /// Manga populer untuk beranda.
 final popularMangaProvider = FutureProvider.autoDispose<List<Manga>>((ref) {

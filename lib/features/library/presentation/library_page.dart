@@ -1,0 +1,342 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../manga/presentation/widgets/manga_card.dart';
+import '../data/models/library_models.dart';
+import '../library_providers.dart';
+
+/// Pustaka: manga yang diikuti + riwayat baca.
+class LibraryPage extends ConsumerWidget {
+  const LibraryPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final followed = ref.watch(followedMangaProvider);
+    final history = ref.watch(readingHistoryProvider);
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          title: const Text('Pustaka', style: AppTypography.titleLarge),
+          actions: <Widget>[
+            if (history.isNotEmpty)
+              IconButton(
+                tooltip: 'Hapus semua riwayat',
+                icon: const Icon(Icons.delete_sweep_outlined),
+                onPressed: () => _confirmClearHistory(context, ref),
+              ),
+          ],
+          bottom: TabBar(
+            indicatorColor: AppColors.primary,
+            labelColor: AppColors.onSurface,
+            unselectedLabelColor: AppColors.onSurfaceVariant,
+            dividerColor: AppColors.outlineVariant,
+            labelStyle: AppTypography.labelLarge,
+            tabs: <Widget>[
+              Tab(text: 'Diikuti (${followed.length})'),
+              Tab(text: 'Riwayat (${history.length})'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: <Widget>[
+            _FollowedTab(items: followed),
+            _HistoryTab(items: history),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmClearHistory(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainer,
+        title: const Text('Hapus riwayat?', style: AppTypography.titleMedium),
+        content: const Text(
+          'Semua riwayat baca akan dihapus. Manga di daftar Diikuti tidak '
+          'terpengaruh.',
+          style: AppTypography.bodySmall,
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      ref.read(readingHistoryProvider.notifier).clear();
+    }
+  }
+}
+
+class _FollowedTab extends ConsumerWidget {
+  const _FollowedTab({required this.items});
+
+  final List<FollowedManga> items;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (items.isEmpty) {
+      return const _EmptyState(
+        icon: Icons.bookmark_border,
+        title: 'Belum ada manga diikuti',
+        subtitle:
+            'Buka halaman manga lalu tekan tombol ikuti untuk menyimpannya '
+            'di sini.',
+      );
+    }
+
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.l,
+            AppSpacing.s,
+            AppSpacing.l,
+            AppSpacing.xs,
+          ),
+          child: Text(
+            'Tekan lama kartu untuk berhenti mengikuti.',
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(AppSpacing.l),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: AppSpacing.m,
+              mainAxisSpacing: AppSpacing.m,
+              childAspectRatio: 0.58,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) => _FollowedCard(item: items[index]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FollowedCard extends ConsumerWidget {
+  const _FollowedCard({required this.item});
+
+  final FollowedManga item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onLongPress: () => _confirmUnfollow(context, ref),
+      child: MangaCard(manga: item.toManga()),
+    );
+  }
+
+  Future<void> _confirmUnfollow(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainer,
+        title: const Text('Berhenti mengikuti?', style: AppTypography.titleMedium),
+        content: Text(
+          item.title,
+          style: AppTypography.bodySmall,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      ref.read(followedMangaProvider.notifier).remove(item.id);
+    }
+  }
+}
+
+class _HistoryTab extends ConsumerWidget {
+  const _HistoryTab({required this.items});
+
+  final List<ReadingHistoryEntry> items;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (items.isEmpty) {
+      return const _EmptyState(
+        icon: Icons.history,
+        title: 'Belum ada riwayat baca',
+        subtitle: 'Chapter yang kamu buka akan muncul di sini.',
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+      itemCount: items.length,
+      separatorBuilder: (context, index) =>
+          const Divider(height: 1, color: AppColors.outlineVariant),
+      itemBuilder: (context, index) {
+        final entry = items[index];
+        return _HistoryTile(entry: entry);
+      },
+    );
+  }
+}
+
+class _HistoryTile extends ConsumerWidget {
+  const _HistoryTile({required this.entry});
+
+  final ReadingHistoryEntry entry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.l,
+        vertical: AppSpacing.xs,
+      ),
+      leading: _CoverThumb(url: entry.coverUrl),
+      title: Text(
+        entry.mangaTitle.isEmpty ? 'Tanpa judul' : entry.mangaTitle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.bodyMedium,
+      ),
+      subtitle: Text(
+        '${entry.chapterLabel}  •  ${_relativeTime(entry.readAt)}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.labelSmall,
+      ),
+      trailing: IconButton(
+        tooltip: 'Hapus dari riwayat',
+        icon: const Icon(
+          Icons.close,
+          size: 18,
+          color: AppColors.onSurfaceVariant,
+        ),
+        onPressed: () =>
+            ref.read(readingHistoryProvider.notifier).remove(entry.mangaId),
+      ),
+      onTap: () {
+        final uri = Uri(
+          path: '/manga/${entry.mangaId}/read/${entry.chapterId}',
+          queryParameters: <String, String>{
+            'title': entry.chapterTitle,
+            'number': entry.chapterNumber,
+          },
+        );
+        context.push(uri.toString());
+      },
+    );
+  }
+}
+
+class _CoverThumb extends StatelessWidget {
+  const _CoverThumb({required this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    const fallback = ColoredBox(
+      color: AppColors.surfaceContainerHigh,
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        size: 16,
+        color: AppColors.onSurfaceVariant,
+      ),
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.s),
+      child: SizedBox(
+        width: 44,
+        height: 60,
+        child: url == null
+            ? fallback
+            : CachedNetworkImage(
+                imageUrl: url!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) =>
+                    const ColoredBox(color: AppColors.surfaceContainerHigh),
+                errorWidget: (context, url, error) => fallback,
+              ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(icon, size: 44, color: AppColors.onSurfaceVariant),
+            const SizedBox(height: AppSpacing.m),
+            Text(title, style: AppTypography.titleMedium, textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.s),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "baru saja", "5 menit lalu", "3 hari lalu", lalu tanggal.
+String _relativeTime(DateTime time) {
+  final now = DateTime.now();
+  final diff = now.difference(time);
+  if (diff.inSeconds < 60) return 'baru saja';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} menit lalu';
+  if (diff.inHours < 24) return '${diff.inHours} jam lalu';
+  if (diff.inDays < 30) return '${diff.inDays} hari lalu';
+  final d = time.day.toString().padLeft(2, '0');
+  final m = time.month.toString().padLeft(2, '0');
+  return '$d/$m/${time.year}';
+}

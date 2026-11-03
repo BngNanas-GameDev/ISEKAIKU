@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../library/data/models/library_models.dart';
+import '../../library/library_providers.dart';
 import '../data/models/manga.dart';
 import '../manga_providers.dart';
 import 'widgets/manga_card.dart';
@@ -65,6 +67,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
+          actions: <Widget>[
+            _FollowButton(manga: manga),
+          ],
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(
               fit: StackFit.expand,
@@ -202,7 +207,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                       selected: <String>{language},
                       onSelectionChanged: (value) => ref
                           .read(chapterLanguageProvider.notifier)
-                          .state = value.first,
+                          .set(value.first),
                     ),
                   ],
                 ),
@@ -386,6 +391,47 @@ class _GenreChip extends StatelessWidget {
           color: AppColors.onPrimaryContainer,
         ),
       ),
+    );
+  }
+}
+
+/// Tombol ikuti/berhenti mengikuti manga ini (disimpan lokal).
+class _FollowButton extends ConsumerWidget {
+  const _FollowButton({required this.manga});
+
+  final Manga manga;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final following = ref.watch(isFollowingProvider(manga.id));
+
+    return IconButton(
+      tooltip: following ? 'Berhenti mengikuti' : 'Ikuti manga',
+      icon: Icon(following ? Icons.bookmark : Icons.bookmark_border),
+      color: following ? AppColors.primary : AppColors.onSurface,
+      onPressed: () {
+        ref.read(followedMangaProvider.notifier).toggle(
+              FollowedManga(
+                id: manga.id,
+                title: manga.title,
+                coverUrl: manga.coverUrl,
+                author: manga.author,
+                followedAt: DateTime.now(),
+              ),
+            );
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                following
+                    ? 'Dihapus dari Pustaka'
+                    : 'Ditambahkan ke Pustaka',
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+      },
     );
   }
 }

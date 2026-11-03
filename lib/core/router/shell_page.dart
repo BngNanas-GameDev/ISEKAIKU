@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/app_colors.dart';
-import '../theme/app_typography.dart';
 
 /// Kerangka dengan bottom navigation untuk tab utama.
 class ShellPage extends StatelessWidget {
@@ -56,32 +55,6 @@ class ShellPage extends StatelessWidget {
                 label: 'Pustaka',
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Placeholder pustaka (M2: follow lokal + riwayat).
-class LibraryPlaceholderPage extends StatelessWidget {
-  const LibraryPlaceholderPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        title: const Text('Pustaka', style: AppTypography.titleLarge),
-      ),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Pustaka dan riwayat baca tersedia di M2.',
-            style: AppTypography.bodyMedium,
-            textAlign: TextAlign.center,
           ),
         ),
       ),

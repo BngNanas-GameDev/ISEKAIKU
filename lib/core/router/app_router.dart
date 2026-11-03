@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/iseakaiku_wordmark.dart';
+import '../../features/library/presentation/library_page.dart';
 import '../../features/manga/presentation/home_page.dart';
 import '../../features/manga/presentation/manga_detail_page.dart';
 import '../../features/manga/presentation/reader_page.dart';
@@ -30,7 +31,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/library',
-          builder: (context, state) => const LibraryPlaceholderPage(),
+          builder: (context, state) => const LibraryPage(),
         ),
       ],
     ),

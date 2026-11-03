@@ -117,7 +117,10 @@ lib/
         doh_http_overrides.dart # pasang DoH ke semua HttpClient aplikasi
     theme/                # colors, typography, spacing, theme, fonts
     widgets/              # IsekaikuWordmark + Design System preview
-  features/               # (M1+) manga, anime, player, library, settings
+    storage/              # StorageService (SharedPreferences) + notifier persisten
+  features/
+    manga/                # M1: browse, search, detail, reader
+    library/              # M2: Pustaka (diikuti + riwayat), model & store lokal
   sources/                # (M3+) VideoSourceProvider
 assets/
   fonts/                  # 5 file Asimov + LICENSE + NOTICE
@@ -161,7 +164,9 @@ sehingga tampil di halaman lisensi aplikasi.
 - [x] M0 Skeleton, design system, wordmark, preview web
 - [x] M1 MangaDex: browse populer/terbaru, search, detail, chapter list, reader
       (paged + webtoon, prefetch, hemat kuota), error state informatif
-- [ ] M2 Follow lokal, riwayat baca, pengaturan reader persisten, library
+- [x] M2 Follow lokal, riwayat baca, pengaturan reader persisten, library
+      (StorageService + provider persisten, Pustaka 2 tab, tombol ikuti di
+      detail, riwayat otomatis di reader)
 - [ ] M3 Gofile provider, koleksi anime manual, fallback WebView
 - [ ] M4 Player media_kit: resume, gesture, subtitle, kecepatan
 - [ ] M5 Polish, ikon adaptif, splash, release signing
