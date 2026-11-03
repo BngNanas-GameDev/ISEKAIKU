@@ -1,0 +1,15 @@
+Asimov Font
+============
+
+Copyright (c) KineticPlasma Fonts
+Derivative of Roboto by Google, Inc.
+
+Licensed under the Apache License, Version 2.0 (see LICENSE-Asimov.txt).
+
+Asimov adds new characters (Roman numerals, Russian Ruble sign, interrobang,
+triple prime) and additional widths/styles, and modifies a few glyphs
+(number 1 and 4, quotation mark, dollar sign, apostrophe, ampersand).
+
+Font is used unmodified in this application.
+
+Source: https://www.fontspace.com/asimov-font-f22365

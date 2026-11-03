@@ -1,0 +1,102 @@
+name: isekaiku
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management & DI
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # Network
+  dio: ^5.4.0
+
+  # Models
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+
+  # Storage
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.0
+
+  # Image caching
+  cached_network_image: ^3.3.0
+
+  # Media
+  media_kit: ^1.1.10
+  media_kit_video: ^1.2.4
+  media_kit_libs_video: ^1.0.4
+  wakelock_plus: ^1.2.0
+  screen_brightness: ^0.2.2
+  volume_controller: ^2.0.7
+  webview_flutter: ^4.7.0
+
+  # Utils
+  url_launcher: ^6.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+  # Code generation
+  build_runner: ^2.4.0
+  riverpod_generator: ^2.4.0
+  freezed: ^2.5.0
+  json_serializable: ^6.8.0
+
+  # Dev tools
+  device_preview: ^1.2.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.1
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: Asimov
+      fonts:
+        - asset: assets/fonts/Asimov-Regular.otf
+        - asset: assets/fonts/Asimov-Italic.otf
+          style: italic
+    - family: AsimovNarrow
+      fonts:
+        - asset: assets/fonts/AsimovNarrow-Regular.otf
+    - family: AsimovWide
+      fonts:
+        - asset: assets/fonts/AsimovWide-Regular.otf
+    - family: AsimovExtraWide
+      fonts:
+        - asset: assets/fonts/AsimovExtraWide-Regular.otf
+
+  assets:
+    - assets/fonts/LICENSE-Asimov.txt
+    - assets/fonts/NOTICE-Asimov.txt
+
+# TODO (M5): tambahkan assets/images/splash_logo.png dan
+# assets/images/icon_launcher.png, lalu uncomment bagian bawah dan jalankan:
+#   flutter pub run flutter_native_splash:create
+#   flutter pub run flutter_launcher_icons:create
+#
+# flutter_native_splash:
+#   color: "#222831"
+#   image: assets/images/splash_logo.png
+#   android: true
+#   web: false
+#
+# flutter_icons:
+#   android: true
+#   ios: false
+#   remove_alpha_ios: true
+#   image_path: assets/images/icon_launcher.png
