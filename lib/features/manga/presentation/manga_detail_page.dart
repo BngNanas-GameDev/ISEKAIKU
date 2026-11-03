@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../library/data/models/library_models.dart';
 import '../../library/library_providers.dart';
+import '../data/chapter_range.dart';
 import '../data/models/manga.dart';
 import '../manga_providers.dart';
 import 'widgets/manga_card.dart';
@@ -56,6 +57,11 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     final manga = widget.manga;
     final chapters = ref.watch(chapterListProvider(manga.id));
     final language = ref.watch(chapterLanguageProvider);
+
+    final availability = switch (chapters) {
+      AsyncData(:final value) => ChapterRange.from(value, manga.status),
+      _ => null,
+    };
 
     return CustomScrollView(
       slivers: <Widget>[
@@ -211,6 +217,21 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     ),
                   ],
                 ),
+                if (availability != null) ...<Widget>[
+                  const SizedBox(height: AppSpacing.s),
+                  Wrap(
+                    spacing: AppSpacing.s,
+                    runSpacing: AppSpacing.xs,
+                    children: <Widget>[
+                      _RangeBadge(label: availability.label),
+                      if (availability.complete)
+                        const _RangeBadge(
+                          label: 'Lengkap',
+                          highlight: true,
+                        ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.s),
               ],
             ),
@@ -221,8 +242,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.all(AppSpacing.l),
-                  child: Text('Belum ada chapter tersedia.',
-                      style: AppTypography.bodySmall),
+                  child: Text(
+                    'Belum ada chapter yang bisa dibaca.',
+                    style: AppTypography.bodySmall,
+                  ),
                 ),
               ),
             ],
@@ -432,6 +455,48 @@ class _FollowButton extends ConsumerWidget {
             ),
           );
       },
+    );
+  }
+}
+
+class _RangeBadge extends StatelessWidget {
+  const _RangeBadge({required this.label, this.highlight = false});
+
+  final String label;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = highlight ? AppColors.primary : AppColors.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: highlight
+            ? AppColors.primary.withAlpha(38)
+            : AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.s),
+        border: Border.all(
+          color: highlight ? AppColors.primary : AppColors.outlineVariant,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            highlight ? Icons.check_circle_outline : Icons.menu_book_outlined,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(color: color),
+          ),
+        ],
+      ),
     );
   }
 }

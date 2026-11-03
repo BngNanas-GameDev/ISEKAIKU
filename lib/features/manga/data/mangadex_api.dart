@@ -11,8 +11,11 @@ import 'models/manga.dart';
 /// throttle 1 req/detik, dan retry otomatis saat 429.
 class MangaDexApi {
   final ApiClient _client;
+  final ApiClient _probe;
 
-  MangaDexApi([ApiClient? client]) : _client = client ?? mangaDexClient;
+  MangaDexApi([ApiClient? client, ApiClient? probe])
+      : _client = client ?? mangaDexClient,
+        _probe = probe ?? mangaDexProbeClient;
 
   static const List<String> _includeRelations = <String>[
     'cover_art',
@@ -80,18 +83,21 @@ class MangaDexApi {
     return MangaDexMapper.manga(json['data'] as Map<String, dynamic>);
   }
 
-  /// Daftar chapter. Preferensi bahasa [language], fallback [fallbackLanguage].
+  /// Daftar chapter untuk **satu bahasa saja**.
+  ///
+  /// Chapter dengan bahasa lain tidak diikutkan, supaya daftar tidak berubah
+  /// isi saat pengguna memilih ID lalu menggulir sampai bawah.
+  ///
+  /// `includeExternalUrl: 0` membuang chapter yang hanya menautkan situs lain
+  /// (judul berlisensi), karena chapter seperti itu tidak bisa dibaca in-app.
   Future<List<Chapter>> chapters(
     String mangaId, {
     String language = 'id',
-    String fallbackLanguage = 'en',
     int limit = 500,
   }) async {
-    final languages = <String>{language, fallbackLanguage}.toList();
-
     final json = await _getJson('/manga/$mangaId/feed', <String, dynamic>{
       'limit': limit,
-      'translatedLanguage': languages,
+      'translatedLanguage': <String>[language],
       'order[volume]': 'asc',
       'order[chapter]': 'asc',
       'includeEmptyPages': 0,
@@ -104,10 +110,22 @@ class MangaDexApi {
         .map(MangaDexMapper.chapter)
         .toList();
 
-    return MangaDexMapper.sortChapters(
-      data,
-      preferredLanguage: language,
-    );
+    return MangaDexMapper.sortChapters(data, preferredLanguage: language);
+  }
+
+  /// Jumlah chapter yang bisa dibaca pada [language].
+  ///
+  /// Memakai `limit=1` supaya payload kecil; total diambil dari metadata
+  /// respons. Dipakai untuk menyaring judul yang tidak punya chapter.
+  Future<int> chapterCount(String mangaId, {required String language}) async {
+    final json = await _getProbeJson('/manga/$mangaId/feed', <String, dynamic>{
+      'limit': 1,
+      'translatedLanguage': <String>[language],
+      'includeEmptyPages': 0,
+      'includeExternalUrl': 0,
+      'contentRating': <String>['safe', 'suggestive'],
+    });
+    return (json['total'] as num?)?.toInt() ?? 0;
   }
 
   /// URL gambar untuk chapter tertentu.
@@ -122,6 +140,20 @@ class MangaDexApi {
   ) async {
     try {
       final data = await _client.get<dynamic>(path, query: query);
+      if (data is Map<String, dynamic>) return data;
+      throw ApiException(message: 'Respons tidak dikenal dari MangaDex');
+    } on DioException catch (e) {
+      throw dioErrorToApiException(e);
+    }
+  }
+
+  /// Sama seperti [_getJson], tetapi memakai client probe (throttle ringan).
+  Future<Map<String, dynamic>> _getProbeJson(
+    String path,
+    Map<String, dynamic>? query,
+  ) async {
+    try {
+      final data = await _probe.get<dynamic>(path, query: query);
       if (data is Map<String, dynamic>) return data;
       throw ApiException(message: 'Respons tidak dikenal dari MangaDex');
     } on DioException catch (e) {

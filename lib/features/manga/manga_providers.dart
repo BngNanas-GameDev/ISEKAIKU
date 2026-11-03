@@ -1,10 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/storage_providers.dart';
+import 'data/chapter_availability.dart';
 import 'data/mangadex_api.dart';
 import 'data/models/manga.dart';
 
 final mangaDexApiProvider = Provider<MangaDexApi>((ref) => MangaDexApi());
+
+/// Pemeriksa + cache ketersediaan chapter per judul.
+final chapterAvailabilityProvider = Provider<ChapterAvailability>(
+  (ref) => ChapterAvailability(
+    ref.watch(mangaDexApiProvider),
+    ref.watch(storageServiceProvider),
+  ),
+);
 
 /// Kunci penyimpanan setting reader.
 const String readerLanguageKey = 'reader.chapterLanguage';
@@ -47,13 +56,29 @@ final webtoonModeProvider =
 });
 
 /// Manga populer untuk beranda.
-final popularMangaProvider = FutureProvider.autoDispose<List<Manga>>((ref) {
-  return ref.watch(mangaDexApiProvider).popular(limit: 20);
+///
+/// Judul yang tidak punya chapter pada bahasa terpilih disaring keluar.
+final popularMangaProvider =
+    FutureProvider.autoDispose<List<Manga>>((ref) async {
+  final language = ref.watch(chapterLanguageProvider);
+  final list = await ref
+      .watch(mangaDexApiProvider)
+      .popular(limit: 20, language: language);
+  return ref
+      .watch(chapterAvailabilityProvider)
+      .filterAvailable(list, (manga) => manga.id, language);
 });
 
 /// Manga terbaru untuk beranda.
-final latestMangaProvider = FutureProvider.autoDispose<List<Manga>>((ref) {
-  return ref.watch(mangaDexApiProvider).latest(limit: 20);
+final latestMangaProvider =
+    FutureProvider.autoDispose<List<Manga>>((ref) async {
+  final language = ref.watch(chapterLanguageProvider);
+  final list = await ref
+      .watch(mangaDexApiProvider)
+      .latest(limit: 20, language: language);
+  return ref
+      .watch(chapterAvailabilityProvider)
+      .filterAvailable(list, (manga) => manga.id, language);
 });
 
 final mangaDetailProvider =
@@ -74,7 +99,11 @@ final chapterPagesProvider =
 
 /// Hasil pencarian berdasarkan kata kunci.
 final searchResultsProvider =
-    FutureProvider.autoDispose.family<List<Manga>, String>((ref, query) {
+    FutureProvider.autoDispose.family<List<Manga>, String>((ref, query) async {
   if (query.trim().isEmpty) return <Manga>[];
-  return ref.watch(mangaDexApiProvider).search(query.trim());
+  final language = ref.watch(chapterLanguageProvider);
+  final list = await ref.watch(mangaDexApiProvider).search(query.trim());
+  return ref
+      .watch(chapterAvailabilityProvider)
+      .filterAvailable(list, (manga) => manga.id, language);
 });

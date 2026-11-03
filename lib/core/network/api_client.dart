@@ -7,9 +7,10 @@
 import 'package:dio/dio.dart';
 
 class ApiClient {
-  static const Duration _throttleInterval = Duration(milliseconds: 1100);
+  static const Duration _defaultThrottle = Duration(milliseconds: 1100);
 
   final Dio _dio;
+  final Duration _throttleInterval;
   DateTime? _lastRequest;
 
   ApiClient({
@@ -17,7 +18,9 @@ class ApiClient {
     required String userAgent,
     int connectTimeout = 30,
     int receiveTimeout = 30,
-  }) : _dio = Dio(
+    Duration throttle = _defaultThrottle,
+  })  : _throttleInterval = throttle,
+        _dio = Dio(
           BaseOptions(
             baseUrl: baseUrl,
             connectTimeout: Duration(seconds: connectTimeout),
@@ -86,4 +89,15 @@ const String mangaDexBaseUrl = String.fromEnvironment(
 final ApiClient mangaDexClient = ApiClient(
   baseUrl: mangaDexBaseUrl,
   userAgent: 'Isekaiku/0.1.0 (https://github.com/BngNanas-GameDev/ISEKAIKU)',
+);
+
+/// Client ringan untuk mengecek ketersediaan chapter (`limit=1`).
+///
+/// Throttle lebih rapat karena dipakai untuk banyak judul sekaligus, tetapi
+/// masih di bawah batas MangaDex (±5 request/detik). Request konten tetap
+/// memakai [mangaDexClient] dengan throttle 1,1 detik.
+final ApiClient mangaDexProbeClient = ApiClient(
+  baseUrl: mangaDexBaseUrl,
+  userAgent: 'Isekaiku/0.1.0 (https://github.com/BngNanas-GameDev/ISEKAIKU)',
+  throttle: const Duration(milliseconds: 240),
 );
