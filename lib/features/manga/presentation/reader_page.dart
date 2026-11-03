@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'dart:async';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -19,12 +21,16 @@ class ReaderPage extends ConsumerStatefulWidget {
   final String chapterTitle;
   final String chapterNumber;
 
+  /// Halaman awal (1-based) saat melanjutkan bacaan.
+  final int initialPage;
+
   const ReaderPage({
     super.key,
     required this.mangaId,
     required this.chapterId,
     this.chapterTitle = '',
     this.chapterNumber = '',
+    this.initialPage = 0,
   });
 
   @override
@@ -32,45 +38,102 @@ class ReaderPage extends ConsumerStatefulWidget {
 }
 
 class _ReaderPageState extends ConsumerState<ReaderPage> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
+  late final PageController _pageController;
+  late int _currentPage;
   bool _chromeVisible = true;
+
+  int _totalPages = 0;
+  bool _firstSaveDone = false;
+  Timer? _saveTimer;
 
   @override
   void initState() {
     super.initState();
-    // Catat riwayat setelah frame pertama supaya tidak menahan render.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _recordHistory());
+    _currentPage = widget.initialPage > 0 ? widget.initialPage - 1 : 0;
+    _pageController = PageController(initialPage: _currentPage);
+
+    // Tandai chapter ini sudah dibaca, lalu catat riwayat setelah frame
+    // pertama supaya tidak menahan render.
+    ref
+        .read(readChaptersProvider.notifier)
+        .markRead(widget.mangaId, widget.chapterId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _saveProgress(
+        page: widget.initialPage > 0 ? widget.initialPage : 1,
+        total: _totalPages,
+      );
+    });
   }
 
-  /// Simpan chapter ini sebagai progres terakhir manga tsb.
-  Future<void> _recordHistory() async {
+  /// Simpan chapter + posisi halaman sebagai progres terakhir manga ini.
+  ///
+  /// Ditulis **langsung** memakai detail yang sudah ada di cache, supaya
+  /// progres tidak bergantung pada request jaringan. Jika judul/cover belum
+  /// ada, dilengkapi di latar belakang.
+  void _saveProgress({required int page, required int total}) {
     if (!mounted) return;
 
-    Manga? detail;
-    try {
-      detail = await ref.read(mangaDetailProvider(widget.mangaId).future);
-    } catch (_) {
-      // Judul/cover saja yang hilang; riwayat tetap dicatat.
-      detail = null;
+    final cached = ref.read(mangaDetailProvider(widget.mangaId)).valueOrNull;
+    _write(
+      page: page,
+      total: total,
+      title: cached?.title ?? '',
+      coverUrl: cached?.coverUrl,
+    );
+
+    if (cached == null) {
+      ref
+          .read(mangaDetailProvider(widget.mangaId).future)
+          .then((detail) {
+            if (!mounted) return;
+            final current =
+                ref.read(readingHistoryProvider.notifier).entryFor(widget.mangaId);
+            if (current == null || current.chapterId != widget.chapterId) return;
+            _write(
+              page: page,
+              total: total,
+              title: detail.title,
+              coverUrl: detail.coverUrl,
+            );
+          })
+          .catchError((Object _) {});
     }
-    if (!mounted) return;
+  }
 
+  void _write({
+    required int page,
+    required int total,
+    required String title,
+    String? coverUrl,
+  }) {
     ref.read(readingHistoryProvider.notifier).record(
           ReadingHistoryEntry(
             mangaId: widget.mangaId,
-            mangaTitle: detail?.title ?? '',
-            coverUrl: detail?.coverUrl,
+            mangaTitle: title,
+            coverUrl: coverUrl,
             chapterId: widget.chapterId,
             chapterNumber: widget.chapterNumber,
             chapterTitle: widget.chapterTitle,
             readAt: DateTime.now(),
+            page: page,
+            totalPages: total,
           ),
         );
   }
 
+  /// Simpan progres setelah pengguna berhenti membalik halaman.
+  void _scheduleSave(int page, int total) {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      _saveProgress(page: page, total: total);
+    });
+  }
+
   @override
   void dispose() {
+    _saveTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -114,6 +177,17 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   Widget _buildReader(ChapterPages pages, bool saver, bool webtoon) {
     final urls = pages.urls(saver: saver);
 
+    if (urls.isNotEmpty) {
+      _totalPages = urls.length;
+      if (!_firstSaveDone) {
+        _firstSaveDone = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _saveProgress(page: _currentPage + 1, total: _totalPages);
+        });
+      }
+    }
+
     if (urls.isEmpty) {
       return const Center(
         child: Text('Chapter tidak memiliki halaman.', style: AppTypography.bodySmall),
@@ -140,6 +214,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     onPageChanged: (index) {
                       setState(() => _currentPage = index);
                       _prefetch(urls, index);
+                      _scheduleSave(index + 1, urls.length);
                     },
                     itemBuilder: (context, index) => InteractiveViewer(
                       minScale: 1,

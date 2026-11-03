@@ -57,6 +57,8 @@ class ReadingHistoryEntry {
     this.coverUrl,
     this.chapterNumber = '',
     this.chapterTitle = '',
+    this.page = 0,
+    this.totalPages = 0,
   });
 
   final String mangaId;
@@ -67,11 +69,52 @@ class ReadingHistoryEntry {
   final String chapterTitle;
   final DateTime readAt;
 
+  /// Halaman terakhir yang dibuka (1-based). 0 = belum diketahui.
+  final int page;
+
+  /// Jumlah halaman chapter saat terakhir dibuka.
+  final int totalPages;
+
   /// Label chapter untuk ditampilkan di daftar riwayat.
   String get chapterLabel {
     if (chapterNumber.isNotEmpty) return 'Chapter $chapterNumber';
     if (chapterTitle.isNotEmpty) return chapterTitle;
     return 'Chapter';
+  }
+
+  /// 0.0–1.0, atau null bila jumlah halaman belum diketahui.
+  double? get progress {
+    if (totalPages <= 0 || page <= 0) return null;
+    return (page / totalPages).clamp(0.0, 1.0);
+  }
+
+  /// Ringkasan posisi untuk ditampilkan, mis. "Halaman 12 / 40".
+  String get positionLabel {
+    if (page <= 0) return chapterLabel;
+    if (totalPages <= 0) return 'Halaman $page';
+    return 'Halaman $page / $totalPages';
+  }
+
+  ReadingHistoryEntry copyWith({
+    String? mangaTitle,
+    String? coverUrl,
+    String? chapterNumber,
+    String? chapterTitle,
+    DateTime? readAt,
+    int? page,
+    int? totalPages,
+  }) {
+    return ReadingHistoryEntry(
+      mangaId: mangaId,
+      mangaTitle: mangaTitle ?? this.mangaTitle,
+      coverUrl: coverUrl ?? this.coverUrl,
+      chapterId: chapterId,
+      chapterNumber: chapterNumber ?? this.chapterNumber,
+      chapterTitle: chapterTitle ?? this.chapterTitle,
+      readAt: readAt ?? this.readAt,
+      page: page ?? this.page,
+      totalPages: totalPages ?? this.totalPages,
+    );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -82,6 +125,8 @@ class ReadingHistoryEntry {
         'chapterNumber': chapterNumber,
         'chapterTitle': chapterTitle,
         'readAt': readAt.toIso8601String(),
+        'page': page,
+        'totalPages': totalPages,
       };
 
   static ReadingHistoryEntry? tryFromJson(Map<String, dynamic> json) {
@@ -101,6 +146,8 @@ class ReadingHistoryEntry {
           json['chapterTitle'] is String ? json['chapterTitle'] as String : '',
       readAt: DateTime.tryParse(json['readAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+      page: (json['page'] as num?)?.toInt() ?? 0,
+      totalPages: (json['totalPages'] as num?)?.toInt() ?? 0,
     );
   }
 }

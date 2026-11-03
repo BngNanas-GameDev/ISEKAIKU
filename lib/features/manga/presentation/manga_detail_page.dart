@@ -324,17 +324,18 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   }
 }
 
-class _ChapterTile extends StatelessWidget {
+class _ChapterTile extends ConsumerWidget {
   final String mangaId;
   final Chapter chapter;
 
   const _ChapterTile({required this.mangaId, required this.chapter});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final label = chapter.chapterNumber.isEmpty
         ? 'Oneshot'
         : 'Chapter ${chapter.chapterNumber}';
+    final read = ref.watch(isChapterReadProvider((mangaId, chapter.id)));
 
     return ListTile(
       tileColor: AppColors.background,
@@ -353,16 +354,24 @@ class _ChapterTile extends StatelessWidget {
         chapter.title.isEmpty ? label : chapter.title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: AppTypography.bodyMedium,
+        style: AppTypography.bodyMedium.copyWith(
+          color: read ? AppColors.onSurfaceVariant : AppColors.onSurface,
+        ),
       ),
       subtitle: Text(
         '$label  •  ${chapter.language.toUpperCase()}  •  ${chapter.pages} halaman',
         style: AppTypography.labelSmall,
       ),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: AppColors.onSurfaceVariant,
-      ),
+      trailing: read
+          ? const Icon(
+              Icons.check_circle,
+              size: 20,
+              color: AppColors.primary,
+            )
+          : const Icon(
+              Icons.chevron_right,
+              color: AppColors.onSurfaceVariant,
+            ),
     );
   }
 }

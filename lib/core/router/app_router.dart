@@ -47,6 +47,8 @@ final appRouter = GoRouter(
         chapterId: state.pathParameters['chapterId']!,
         chapterTitle: state.uri.queryParameters['title'] ?? '',
         chapterNumber: state.uri.queryParameters['number'] ?? '',
+        initialPage:
+            int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 0,
       ),
     ),
     GoRoute(

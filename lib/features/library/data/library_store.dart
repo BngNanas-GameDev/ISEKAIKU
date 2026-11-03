@@ -14,6 +14,7 @@ class LibraryStore {
 
   static const String followedKey = 'library.followed';
   static const String historyKey = 'library.history';
+  static const String readChaptersKey = 'library.readChapters';
 
   /// Batas riwayat agar tidak tumbuh tanpa henti.
   static const int historyLimit = 100;
@@ -54,6 +55,32 @@ class LibraryStore {
       historyKey,
       items.map((e) => jsonEncode(e.toJson())).toList(),
     );
+  }
+
+  /// Chapter yang sudah pernah dibuka, per manga.
+  Map<String, Set<String>> loadReadChapters() {
+    final String raw = _storage.getString(readChaptersKey);
+    if (raw.isEmpty) return <String, Set<String>>{};
+    try {
+      final dynamic decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return <String, Set<String>>{};
+      final result = <String, Set<String>>{};
+      decoded.forEach((String mangaId, dynamic value) {
+        if (value is List) {
+          result[mangaId] = value.whereType<String>().toSet();
+        }
+      });
+      return result;
+    } on FormatException {
+      return <String, Set<String>>{};
+    }
+  }
+
+  Future<void> saveReadChapters(Map<String, Set<String>> map) {
+    final encoded = <String, dynamic>{
+      for (final entry in map.entries) entry.key: entry.value.toList(),
+    };
+    return _storage.setString(readChaptersKey, jsonEncode(encoded));
   }
 
   Map<String, dynamic>? _decode(String raw) {

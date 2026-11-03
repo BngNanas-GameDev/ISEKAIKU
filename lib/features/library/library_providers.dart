@@ -86,6 +86,74 @@ final readingHistoryProvider =
   (ref) => HistoryNotifier(ref.watch(libraryStoreProvider)),
 );
 
+/// Chapter yang sudah pernah dibuka, per manga.
+class ReadChaptersNotifier extends StateNotifier<Map<String, Set<String>>> {
+  ReadChaptersNotifier(this._store) : super(_store.loadReadChapters());
+
+  final LibraryStore _store;
+
+  void markRead(String mangaId, String chapterId) {
+    final current = state[mangaId] ?? const <String>{};
+    if (current.contains(chapterId)) return;
+    _commit(<String, Set<String>>{
+      ...state,
+      mangaId: <String>{...current, chapterId},
+    });
+  }
+
+  void unmarkRead(String mangaId, String chapterId) {
+    final current = state[mangaId];
+    if (current == null || !current.contains(chapterId)) return;
+    _commit(<String, Set<String>>{
+      ...state,
+      mangaId: <String>{...current}..remove(chapterId),
+    });
+  }
+
+  void markAllRead(String mangaId, Iterable<String> chapterIds) {
+    final current = state[mangaId] ?? const <String>{};
+    _commit(<String, Set<String>>{
+      ...state,
+      mangaId: <String>{...current, ...chapterIds},
+    });
+  }
+
+  void clearManga(String mangaId) {
+    if (!state.containsKey(mangaId)) return;
+    final next = Map<String, Set<String>>.of(state)..remove(mangaId);
+    _commit(next);
+  }
+
+  void _commit(Map<String, Set<String>> next) {
+    state = next;
+    _store.saveReadChapters(next);
+  }
+}
+
+final readChaptersProvider =
+    StateNotifierProvider<ReadChaptersNotifier, Map<String, Set<String>>>(
+  (ref) => ReadChaptersNotifier(ref.watch(libraryStoreProvider)),
+);
+
+/// Chapter yang sudah dibaca untuk satu manga.
+final readChapterIdsProvider =
+    Provider.family<Set<String>, String>((ref, mangaId) {
+  return ref.watch(readChaptersProvider)[mangaId] ?? const <String>{};
+});
+
+/// Apakah satu chapter sudah pernah dibuka.
+final isChapterReadProvider =
+    Provider.family<bool, (String, String)>((ref, key) {
+  final (mangaId, chapterId) = key;
+  return ref.watch(readChapterIdsProvider(mangaId)).contains(chapterId);
+});
+
+/// Entri riwayat paling baru — dipakai kartu "Lanjut baca".
+final continueReadingProvider = Provider<ReadingHistoryEntry?>((ref) {
+  final entries = ref.watch(readingHistoryProvider);
+  return entries.isEmpty ? null : entries.first;
+});
+
 /// Riwayat untuk satu manga (dipakai untuk menandai progres terakhir).
 final historyEntryProvider =
     Provider.family<ReadingHistoryEntry?, String>((ref, mangaId) {

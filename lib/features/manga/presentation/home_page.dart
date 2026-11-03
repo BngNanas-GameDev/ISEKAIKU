@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/iseakaiku_wordmark.dart';
+import '../../library/data/models/library_models.dart';
+import '../../library/library_providers.dart';
 import '../manga_providers.dart';
 import 'widgets/manga_card.dart';
 
@@ -57,6 +60,8 @@ class HomePage extends ConsumerWidget {
                   ),
                 ),
               ),
+
+              const SliverToBoxAdapter(child: _ContinueReadingCard()),
 
               // ---------------- Populer ----------------
               _SectionHeader(
@@ -195,6 +200,140 @@ class _EmptyNote extends StatelessWidget {
         vertical: AppSpacing.xl,
       ),
       child: Text(text, style: AppTypography.bodySmall),
+    );
+  }
+}
+
+/// Kartu "Lanjut baca": chapter terakhir yang dibuka + posisi halaman.
+class _ContinueReadingCard extends ConsumerWidget {
+  const _ContinueReadingCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entry = ref.watch(continueReadingProvider);
+    if (entry == null) return const SizedBox.shrink();
+
+    final progress = entry.progress;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        0,
+        AppSpacing.l,
+        AppSpacing.l,
+      ),
+      child: Material(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.m),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _open(context, entry),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.m),
+            child: Row(
+              children: <Widget>[
+                _ContinueCover(url: entry.coverUrl),
+                const SizedBox(width: AppSpacing.m),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        'Lanjut baca',
+                        style: AppTypography.labelSmall
+                            .copyWith(color: AppColors.primary),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        entry.mangaTitle.isEmpty
+                            ? 'Tanpa judul'
+                            : entry.mangaTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodyMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        entry.page > 0
+                            ? '${entry.chapterLabel}  •  ${entry.positionLabel}'
+                            : entry.chapterLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelSmall,
+                      ),
+                      if (progress != null) ...<Widget>[
+                        const SizedBox(height: AppSpacing.s),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 3,
+                            backgroundColor: AppColors.surfaceContainerHigh,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s),
+                const Icon(
+                  Icons.play_arrow_rounded,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _open(BuildContext context, ReadingHistoryEntry entry) {
+    final uri = Uri(
+      path: '/manga/${entry.mangaId}/read/${entry.chapterId}',
+      queryParameters: <String, String>{
+        'title': entry.chapterTitle,
+        'number': entry.chapterNumber,
+        if (entry.page > 0) 'page': '${entry.page}',
+      },
+    );
+    context.push(uri.toString());
+  }
+}
+
+class _ContinueCover extends StatelessWidget {
+  const _ContinueCover({required this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    const fallback = ColoredBox(
+      color: AppColors.surfaceContainerHigh,
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        size: 18,
+        color: AppColors.onSurfaceVariant,
+      ),
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.s),
+      child: SizedBox(
+        width: 52,
+        height: 70,
+        child: url == null
+            ? fallback
+            : CachedNetworkImage(
+                imageUrl: url!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) =>
+                    const ColoredBox(color: AppColors.surfaceContainerHigh),
+                errorWidget: (context, url, error) => fallback,
+              ),
+      ),
     );
   }
 }
