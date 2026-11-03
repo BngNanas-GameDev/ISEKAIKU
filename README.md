@@ -122,8 +122,9 @@ sehingga tampil di halaman lisensi aplikasi.
 ## Roadmap
 
 - [x] M0 Skeleton, design system, wordmark, preview web
-- [ ] M1 MangaDex: browse, search, detail, chapter list, reader
-- [ ] M2 Reader settings, prefetch, follow lokal, history, atribusi
+- [x] M1 MangaDex: browse populer/terbaru, search, detail, chapter list, reader
+      (paged + webtoon, prefetch, hemat kuota), error state informatif
+- [ ] M2 Follow lokal, riwayat baca, pengaturan reader persisten, library
 - [ ] M3 Gofile provider, koleksi anime manual, fallback WebView
 - [ ] M4 Player media_kit: resume, gesture, subtitle, kecepatan
 - [ ] M5 Polish, ikon adaptif, splash, release signing
@@ -135,3 +136,24 @@ MangaDex: wajib User-Agent unik, maksimal ±1 request/detik, atribusi
 
 Gofile hanya untuk file yang kamu miliki haknya. Aplikasi tidak menyediakan
 katalog streaming bajakan dan tidak melakukan scraping situs berhak cipta.
+
+## Kalau MangaDex diblokir ISP
+
+Beberapa ISP (mis. Telkomsel/IndiHome) mengalihkan `api.mangadex.org` ke
+halaman blokir, sehingga aplikasi menampilkan pesan "Tidak bisa terhubung ke
+server". Solusi:
+
+1. Pakai VPN di HP, atau
+2. Arahkan base URL ke mirror/proxy yang kamu percaya:
+
+```powershell
+flutter build apk --debug --dart-define=MANGADEX_BASE_URL=https://mirror.contoh
+```
+
+## Uji UI tanpa MangaDex
+
+```powershell
+python tools/mock_mangadex.py 8099
+flutter build web --release --dart-define=MANGADEX_BASE_URL=http://127.0.0.1:8099
+python -m http.server 8090 --directory build\web
+```

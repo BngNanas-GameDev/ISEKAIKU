@@ -17,21 +17,23 @@ class ApiClient {
     required String userAgent,
     int connectTimeout = 30,
     int receiveTimeout = 30,
-  }) : _dio = Dio(BaseOptions(
-          baseUrl: baseUrl,
-          connectTimeout: Duration(seconds: connectTimeout),
-          receiveTimeout: Duration(seconds: receiveTimeout),
-          headers: {
-            'User-Agent': userAgent,
-            'Accept': 'application/json',
-          },
-        )) {
+  }) : _dio = Dio(
+          BaseOptions(
+            baseUrl: baseUrl,
+            connectTimeout: Duration(seconds: connectTimeout),
+            receiveTimeout: Duration(seconds: receiveTimeout),
+            // MangaDex memakai parameter array: includes[], contentRating[], dsb.
+            listFormat: ListFormat.multiCompatible,
+            headers: {
+              'User-Agent': userAgent,
+              'Accept': 'application/json',
+            },
+          ),
+        ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          // Single-flight throttle agar tidak melanggar rate limit MangaDex.
-          // Dart adalah single-threaded per isolate, jadi pengecekan variabel
-          // ini cukup aman tanpa lock eksternal.
+        onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
+          // Throttle sederhana: Dart satu thread per isolate, aman tanpa lock.
           if (_lastRequest != null) {
             final elapsed = DateTime.now().difference(_lastRequest!);
             if (elapsed < _throttleInterval) {
@@ -39,19 +41,24 @@ class ApiClient {
             }
           }
           _lastRequest = DateTime.now();
-          return handler.next(options);
+          handler.next(options);
         },
-        onError: (DioException error, handler) async {
-          // Retry otomatis pada 429 (Too Many Requests).
+        onError: (DioException error, ErrorInterceptorHandler handler) async {
+          // Retry otomatis sekali pada 429 (Too Many Requests).
           if (error.response?.statusCode == 429) {
             final retryAfter = error.response?.headers.value('retry-after');
-            final delay = retryAfter != null
-                ? int.tryParse(retryAfter) ?? 5
-                : 5;
+            final delay =
+                retryAfter != null ? int.tryParse(retryAfter) ?? 5 : 5;
             await Future.delayed(Duration(seconds: delay));
-            return handler.resolve(await _dio.fetch(error.requestOptions));
+            try {
+              final response = await _dio.fetch<dynamic>(error.requestOptions);
+              handler.resolve(response);
+            } on DioException catch (retryError) {
+              handler.next(retryError);
+            }
+            return;
           }
-          return handler.next(error);
+          handler.next(error);
         },
       ),
     );
@@ -68,7 +75,15 @@ class ApiClient {
 }
 
 /// Global singleton agar rate-limit berlaku di seluruh aplikasi.
+///
+/// Base URL bisa diarahkan ke mirror/proxy lewat
+/// `--dart-define=MANGADEX_BASE_URL=...` (mis. saat ISP memblokir MangaDex).
+const String mangaDexBaseUrl = String.fromEnvironment(
+  'MANGADEX_BASE_URL',
+  defaultValue: 'https://api.mangadex.org',
+);
+
 final ApiClient mangaDexClient = ApiClient(
-  baseUrl: 'https://api.mangadex.org',
-  userAgent: 'Isekaiku/1.0.0 (+https://isekaiku.app)',
+  baseUrl: mangaDexBaseUrl,
+  userAgent: 'Isekaiku/0.1.0 (https://github.com/BngNanas-GameDev/ISEKAIKU)',
 );
