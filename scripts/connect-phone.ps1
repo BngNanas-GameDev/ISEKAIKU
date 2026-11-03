@@ -1,34 +1,36 @@
-# Connect ke HP Musam lewat wireless debugging, lalu jalankan Flutter.
+# Connect ke HP lewat wireless debugging, lalu jalankan Flutter.
 #
 # Pemakaian:
-#   .\scripts\connect-phone.ps1                 # connect + flutter run
-#   .\scripts\connect-phone.ps1 -Build          # connect + flutter build apk --debug
-#   .\scripts\connect-phone.ps1 -Pair           # pairing pertama kali
+#   .\scripts\connect-phone.ps1                       # connect + flutter run
+#   .\scripts\connect-phone.ps1 -Build                # connect + flutter build apk --debug
+#   .\scripts\connect-phone.ps1 -Install              # connect + flutter install
+#   .\scripts\connect-phone.ps1 -Pair -PairPort 46247 # pairing pertama kali
+#   .\scripts\connect-phone.ps1 -Discover             # cari port connect otomatis via mDNS
 #
-# Port wireless debugging berubah setiap kali toggle-nya dimatikan.
-# Kalau connect gagal, lihat layar Wireless debugging di HP dan perbarui -Port.
+# Port wireless debugging berubah setiap kali toggle-nya dimatikan. Setelah pairing,
+# port connect berbeda dari port pairing: pakai -Discover atau lihat layar HP.
 
 param(
-  [string]$Ip = "192.168.6.21",
-  [string]$Port = "35183",
+  [string]$Ip = "192.168.1.3",
+  [string]$Port = "",
   [switch]$Pair,
   [string]$PairPort,
   [switch]$Build,
-  [switch]$Install
+  [switch]$Install,
+  [switch]$Discover
 )
 
 $ErrorActionPreference = "Stop"
 
-$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot"
-$env:ANDROID_HOME = "C:\Android\sdk"
-$env:ANDROID_SDK_ROOT = "C:\Android\sdk"
-$adb = "C:\Android\sdk\platform-tools\adb.exe"
-$target = "${Ip}:${Port}"
+# Resolusi Flutter/JDK/SDK/adb tanpa hardcode path mesin.
+. "$PSScriptRoot\_env.ps1"
 
-if (-not (Test-Path $adb)) {
-  throw "adb tidak ditemukan di $adb"
+if (-not $env:ADB -or -not (Test-Path $env:ADB)) {
+  throw "adb tidak ditemukan. Set ANDROID_HOME atau tambahkan platform-tools ke PATH."
 }
+$adb = $env:ADB
 
+Write-Host "adb: $adb" -ForegroundColor DarkGray
 & $adb start-server | Out-Null
 
 if ($Pair) {
@@ -39,8 +41,27 @@ if ($Pair) {
   & $adb pair "${Ip}:${PairPort}"
 }
 
+# Port connect bisa ditemukan lewat mDNS setelah pairing berhasil.
+if (-not $Port -or $Discover) {
+  $mdns = (& $adb mdns services 2>$null) | Select-String -Pattern "_adb-tls-connect\._tcp" |
+    Select-String -Pattern ([regex]::Escape($Ip))
+  if ($mdns) {
+    $line = ($mdns | Select-Object -Last 1).Line
+    if ($line -match "($([regex]::Escape($Ip)):\d+)") {
+      $Port = ($Matches[1] -split ":")[1]
+      Write-Host "Port connect terdeteksi via mDNS: $Port" -ForegroundColor DarkGray
+    }
+  }
+}
+
+if (-not $Port) {
+  throw "Port connect belum diketahui. Jalankan dengan -Port <port> atau -Discover setelah pairing."
+}
+
+$target = "${Ip}:${Port}"
+
 Write-Host "Menghubungkan ke $target ..." -ForegroundColor Cyan
-& $adb connect $target
+& $adb connect $target | Out-Null
 
 $state = (& $adb devices) | Select-String -Pattern ([regex]::Escape($target))
 if (-not $state -or $state -notmatch "device$") {
@@ -48,6 +69,7 @@ if (-not $state -or $state -notmatch "device$") {
   Write-Host "  1. Wireless debugging masih ON dan port masih $Port (port berubah setelah reboot/toggle)"
   Write-Host "  2. Sudah pernah pairing dengan PC ini (-Pair -PairPort <port> saat pertama kali)"
   Write-Host "  3. HP dan PC saling ping: Test-Connection $Ip"
+  Write-Host "  4. Coba -Discover untuk mencari port connect via mDNS"
   exit 1
 }
 

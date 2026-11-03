@@ -178,7 +178,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     style: AppTypography.labelSmall,
                   ),
                   value: webtoon,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   onChanged: (value) =>
                       ref.read(webtoonModeProvider.notifier).state = value,
                 ),
@@ -190,7 +190,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     style: AppTypography.labelSmall,
                   ),
                   value: saver,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   onChanged: (value) =>
                       ref.read(dataSaverProvider.notifier).state = value,
                 ),

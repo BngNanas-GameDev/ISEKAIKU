@@ -46,3 +46,6 @@ app.*.map.json
 
 # Gradle build output di dalam folder android
 android/build/
+
+# Screenshot hasil uji di HP (tidak perlu masuk repo)
+screenshot-*.png

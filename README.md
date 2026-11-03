@@ -40,39 +40,61 @@ Buka `http://127.0.0.1:8090` untuk app, atau
 
 ### Jalankan di HP (wireless debugging)
 
-Setup yang dipakai di mesin ini:
-
-| Komponen | Lokasi |
-|---|---|
-| JDK 17 | `C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot` |
-| Android SDK | `C:\Android\sdk` (platform 35/36, build-tools 35, NDK 26.3) |
-| adb | `C:\Android\sdk\platform-tools\adb.exe` |
+`scripts\_env.ps1` mencari Flutter, JDK, Android SDK, dan adb secara otomatis
+(environment variable dulu, lalu lokasi umum). Tidak perlu hardcode path mesin.
+Kalau perlu di-override, set `FLUTTER_ROOT`, `JAVA_HOME`, `ANDROID_HOME`, atau
+`ADB` sebelum menjalankan script.
 
 ```powershell
-.\scripts\connect-phone.ps1 -Ip 192.168.6.21 -Port 35183
-.\scripts\deploy-phone.ps1                 # build + install + launch + screenshot
+.\scripts\connect-phone.ps1 -Discover       # cari port HP lewat mDNS + flutter run
+.\scripts\deploy-phone.ps1                  # build + install + launch + screenshot
 ```
 
 Pairing pertama kali (sekali per HP):
 
 ```powershell
-.\scripts\connect-phone.ps1 -Pair -PairPort 40817
+.\scripts\connect-phone.ps1 -Pair -PairPort 46247
 # masukkan kode 6 digit dari menu "Pair device with pairing code"
 ```
+
+Setelah pairing, port **connect** berbeda dari port pairing. `-Discover` mencari
+port itu lewat `adb mdns services`; atau isi manual: `-Ip 192.168.1.3 -Port 37331`.
 
 Catatan HyperOS/MIUI: instalasi lewat adb butuh **Developer options → Install via
 USB** aktif. Kalau tetap `INSTALL_FAILED_USER_RESTRICTED`, APK bisa dipasang
 manual dari File Manager (`Download/isekaiku-debug.apk`).
 
-### Workaround DNS (khusus mesin ini)
+### Setup Android SDK + JDK
 
-DNS jaringan lokal sering gagal me-resolve host build (`UnknownHostException`
-acak). Gradle diarahkan memakai hosts file statis:
+Kalau `flutter doctor` bilang "Unable to locate Android SDK":
 
-- `C:\Android\hosts-java.txt` — pemetaan host → IP CDN
-- `android/gradle.properties` → `org.gradle.jvmargs=... -Djdk.net.hosts.file=...`
+```powershell
+# 1. JDK 17 (wajib untuk AGP 8.7.3)
+#    Unduh Temurin 17 x64 zip, ekstrak ke D:\Android\jdk17
 
-Kalau `flutter doctor`/Gradle error jaringan, hentikan daemon dulu:
+# 2. cmdline-tools
+#    Unduh commandlinetools-win-*_latest.zip, ekstrak ke
+#    <ANDROID_HOME>\cmdline-tools\latest (harus ada folder bin/ di dalamnya)
+
+# 3. Set environment (user-level, sekali saja)
+[Environment]::SetEnvironmentVariable("ANDROID_HOME", "D:\Android\sdk", "User")
+[Environment]::SetEnvironmentVariable("JAVA_HOME", "D:\Android\jdk17", "User")
+
+# 4. Pasang paket SDK yang dibutuhkan proyek
+.\scripts\setup-android-sdk.ps1
+```
+
+### Workaround DNS (opsional, mesin tertentu)
+
+Beberapa mesin punya DNS lokal yang gagal me-resolve host build
+(`UnknownHostException` acak). Kalau itu terjadi, arahkan Gradle memakai hosts
+file statis lewat `android/gradle.properties`:
+
+- `org.gradle.jvmargs=... -Djdk.net.hosts.file=C:/Android/hosts-java.txt`
+- `systemProp.jdk.net.hosts.file=C:/Android/hosts-java.txt`
+
+Di mesin ini DNS normal, jadi kedua baris itu sengaja dinonaktifkan. Kalau
+Gradle error jaringan, coba dulu hentikan daemon:
 
 ```powershell
 cd android
@@ -87,7 +109,12 @@ lib/
   main.dart
   core/
     licensing.dart        # registrasi lisensi font (Apache 2.0)
-    network/              # api_client (throttle + retry), api_exception
+    network/
+      api_client.dart     # Dio + throttle 1 req/detik + retry 429
+      api_exception.dart
+      doh/
+        doh_resolver.dart       # query DoH + cache + fallback provider
+        doh_http_overrides.dart # pasang DoH ke semua HttpClient aplikasi
     theme/                # colors, typography, spacing, theme, fonts
     widgets/              # IsekaikuWordmark + Design System preview
   features/               # (M1+) manga, anime, player, library, settings
@@ -95,9 +122,19 @@ lib/
 assets/
   fonts/                  # 5 file Asimov + LICENSE + NOTICE
 scripts/
-  connect-phone.ps1       # pairing / connect wireless debugging
+  _env.ps1                # auto-detect Flutter/JDK/SDK/adb (dipakai script lain)
+  connect-phone.ps1       # pairing / connect wireless debugging + flutter run
   deploy-phone.ps1        # build + install + launch + screenshot
+  setup-android-sdk.ps1   # pasang paket SDK yang dibutuhkan (idempoten)
+tools/
+  doh_probe.dart          # diagnostik: query DoH + HTTPS ke IP hasil DoH
+  tls_http_probe.dart     # diagnostik: TLS handshake + HTTP/1.1 mentah
+  sni_probe.dart          # diagnostik: deteksi blokir berbasis SNI
+  mock_mangadex.py        # server tiruan MangaDex untuk uji UI offline
 test/
+  doh_resolver_test.dart  # unit test parser + provider DoH
+  mangadex_mapper_test.dart
+  manga_test.dart
   widget_test.dart        # smoke test tema & wordmark
 ```
 
@@ -139,15 +176,35 @@ katalog streaming bajakan dan tidak melakukan scraping situs berhak cipta.
 
 ## Kalau MangaDex diblokir ISP
 
-Beberapa ISP (mis. Telkomsel/IndiHome) mengalihkan `api.mangadex.org` ke
-halaman blokir, sehingga aplikasi menampilkan pesan "Tidak bisa terhubung ke
-server". Solusi:
+Beberapa ISP (mis. Telkomsel/IndiHome/MyRepublic) membajak DNS dan mengalihkan
+`api.mangadex.org` ke halaman blokir (`block.<isp>.co.id`), sehingga aplikasi
+menampilkan pesan "Tidak bisa terhubung ke server".
 
-1. Pakai VPN di HP, atau
-2. Arahkan base URL ke mirror/proxy yang kamu percaya:
+**Aplikasi sudah menangani ini otomatis lewat DNS-over-HTTPS (DoH).** Setiap
+`HttpClient` di aplikasi (Dio, cached_network_image) memakai resolver DoH untuk
+mencari IP asli `api.mangadex.org`, lalu tetap memakai TLS normal dengan
+hostname asli untuk SNI + validasi sertifikat. Jadi tidak perlu VPN.
+
+Kalau ingin mematikan DoH (mis. untuk debugging atau jaringan yang memblokir
+DoH juga):
+
+```powershell
+flutter run --dart-define=DISABLE_DOH=true
+```
+
+Kalau ISP ternyata juga memblokir di level IP/SNI (bukan hanya DNS), DoH tidak
+cukup — pakai VPN atau arahkan base URL ke mirror/proxy yang kamu percaya:
 
 ```powershell
 flutter build apk --debug --dart-define=MANGADEX_BASE_URL=https://mirror.contoh
+```
+
+Diagnostik DoH tersedia di `tools/`:
+
+```powershell
+dart run tools/doh_probe.dart        # query DoH + coba HTTPS ke IP hasil DoH
+dart run tools/tls_http_probe.dart   # TLS handshake + HTTP/1.1 mentah
+dart run tools/sni_probe.dart        # uji blokir berbasis SNI
 ```
 
 ## Uji UI tanpa MangaDex
