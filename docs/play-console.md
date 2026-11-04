@@ -170,13 +170,46 @@ Jawab jujur. Untuk build PlaySafe:
 
 1. Play Console → **Testing → Internal testing** → **Create new release**.
 2. Upload `app-release.aab` hasil `-Bundle -PlaySafe`.
-3. Isi release notes, lalu **Save → Review → Start rollout**.
+3. Isi release notes (lihat teks di bawah), lalu
+   **Save → Review → Start rollout**.
 4. Tab **Testers** → **Create email list**, masukkan email penguji
    (maks. 100 untuk internal).
 5. Salin **opt-in URL** dan kirim ke penguji.
 6. Penguji membuka URL → install dari Play → aplikasi muncul sebagai
    “Isekaiku (internal)”.
 7. Uji: login, Pustaka, forum, ganti akun, hemat data, reader.
+
+### Release notes (maks. 500 karakter per bahasa)
+
+Bahasa **Indonesia (id-ID)**:
+
+```
+Rilis pertama Isekaiku (1.0.0).
+- Baca manga dari katalog MangaDex tanpa iklan.
+- Mode halaman dan webtoon, progres baca tersimpan otomatis.
+- Pustaka, riwayat, dan sinkronisasi antar perangkat dengan akun Google.
+- Forum komunitas: rekomendasi manga, tanya jawab, lapor, dan blokir pengguna.
+- Profil: foto, bio, pengikut, aktivitas forum.
+- Hemat data, pilihan bahasa chapter, dan hapus akun langsung di aplikasi.
+```
+
+Bahasa **Inggris (en-US)**, bila ditambahkan:
+
+```
+First release of Isekaiku (1.0.0).
+- Ad-free manga reading from the MangaDex catalog.
+- Page and webtoon modes with automatic progress saving.
+- Library, history, and cross-device sync with a Google account.
+- Community forum: manga recommendations, Q&A, reporting, and user blocking.
+- Profile: photo, bio, followers, forum activity.
+- Data saver, chapter language options, and in-app account deletion.
+```
+
+Catatan:
+- Jangan menyebut konten 18+ di release notes build Play.
+- Untuk update berikutnya, ganti baris pertama jadi `Pembaruan 1.0.1:` dan
+  tulis hanya perubahan yang terlihat pengguna.
+- Maksimal 500 karakter; teks di atas ±415 karakter.
 
 Checklist penguji:
 - [ ] Login Google berhasil.
