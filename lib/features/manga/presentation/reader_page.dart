@@ -44,6 +44,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   int _totalPages = 0;
   bool _firstSaveDone = false;
+  bool _endHintShown = false;
+  double _overscroll = 0;
   Timer? _saveTimer;
 
   @override
@@ -144,6 +146,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final saver = ref.watch(dataSaverProvider);
     final webtoon = ref.watch(webtoonModeProvider);
 
+    // Dimuat juga saat reader dibuka langsung (mis. dari kartu "Lanjut baca"),
+    // supaya navigasi ke chapter berikutnya/sebelumnya tetap bisa ditentukan.
+    ref.watch(chapterListProvider(widget.mangaId));
+
     return Scaffold(
       backgroundColor: AppColors.readerBg,
       body: switch (pagesAsync) {
@@ -209,38 +215,85 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
               final double width = MediaQuery.sizeOf(context).width;
               final double dx = details.localPosition.dx;
 
-              // Ketuk kiri = halaman sebelumnya, kanan = berikutnya,
-              // tengah = tampilkan/sembunyikan kontrol.
+              // Ketuk kiri = mundur, kanan = maju, tengah = toggle kontrol.
+              // Di ujung chapter, ketuk maju/mundur berpindah chapter.
               if (dx < width * 0.3) {
-                _goToPage(_currentPage - 1);
+                if (_totalPages > 0 && _currentPage <= 0) {
+                  _goToPreviousChapter();
+                } else {
+                  _goToPage(_currentPage - 1);
+                }
               } else if (dx > width * 0.7) {
-                _goToPage(_currentPage + 1);
+                if (_totalPages > 0 && _currentPage >= _totalPages - 1) {
+                  _goToNextChapter();
+                } else {
+                  _goToPage(_currentPage + 1);
+                }
               } else {
                 setState(() => _chromeVisible = !_chromeVisible);
               }
             },
             child: webtoon
                 ? ListView.builder(
-                    itemCount: urls.length,
-                    itemBuilder: (context, index) => _ReaderImage(
-                      url: urls[index],
-                      fit: BoxFit.fitWidth,
-                    ),
-                  )
-                : PageView.builder(
-                    controller: _pageController,
-                    itemCount: urls.length,
-                    onPageChanged: (index) {
-                      setState(() => _currentPage = index);
-                      _prefetch(urls, index);
-                      _scheduleSave(index + 1, urls.length);
-                    },
-                    itemBuilder: (context, index) => InteractiveViewer(
-                      minScale: 1,
-                      maxScale: 4,
-                      child: _ReaderImage(
+                    itemCount: urls.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == urls.length) {
+                        return _ChapterFooter(
+                          hasNext: _adjacentChapter(1) != null,
+                          onNext: _goToNextChapter,
+                        );
+                      }
+                      return _ReaderImage(
                         url: urls[index],
-                        fit: BoxFit.contain,
+                        fit: BoxFit.fitWidth,
+                      );
+                    },
+                  )
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      // Hanya hitung overscroll yang berasal dari geseran jari
+                      // (dragDetails != null), supaya koreksi posisi saat
+                      // layar pertama dimuat tidak ikut memicu pindah chapter.
+                      if (notification is OverscrollNotification) {
+                        if (notification.dragDetails == null) return false;
+
+                        final bool atEnd = _currentPage >= _totalPages - 1;
+                        final bool atStart = _currentPage <= 0;
+
+                        if (atEnd && notification.overscroll > 0) {
+                          _overscroll += notification.overscroll;
+                          if (_overscroll > 90) {
+                            _overscroll = 0;
+                            _goToNextChapter();
+                          }
+                        } else if (atStart && notification.overscroll < 0) {
+                          _overscroll += notification.overscroll.abs();
+                          if (_overscroll > 90) {
+                            _overscroll = 0;
+                            _goToPreviousChapter();
+                          }
+                        }
+                      } else if (notification is ScrollEndNotification) {
+                        _overscroll = 0;
+                      }
+                      return false;
+                    },
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: urls.length,
+                      onPageChanged: (index) {
+                        setState(() => _currentPage = index);
+                        _prefetch(urls, index);
+                        _scheduleSave(index + 1, urls.length);
+                        if (index < urls.length - 1) _endHintShown = false;
+                      },
+                      itemBuilder: (context, index) => InteractiveViewer(
+                        minScale: 1,
+                        maxScale: 4,
+                        child: _ReaderImage(
+                          url: urls[index],
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
@@ -277,6 +330,73 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
     );
+  }
+
+  /// Chapter sebelum/berikutnya pada bahasa yang sama.
+  Chapter? _adjacentChapter(int delta) {
+    final chapters =
+        ref.read(chapterListProvider(widget.mangaId)).valueOrNull;
+    if (chapters == null || chapters.isEmpty) return null;
+
+    final int index =
+        chapters.indexWhere((Chapter c) => c.id == widget.chapterId);
+    if (index < 0) return null;
+
+    final int target = index + delta;
+    if (target < 0 || target >= chapters.length) return null;
+    return chapters[target];
+  }
+
+  /// Buka [chapter] menggantikan reader saat ini, supaya tombol kembali
+  /// tetap menuju halaman detail (bukan menumpuk chapter).
+  void _openChapter(Chapter chapter) {
+    final Uri uri = Uri(
+      path: '/manga/${widget.mangaId}/read/${chapter.id}',
+      queryParameters: <String, String>{
+        'title': chapter.title,
+        'number': chapter.chapterNumber,
+      },
+    );
+    context.pushReplacement(uri.toString());
+  }
+
+  void _goToNextChapter() {
+    final Chapter? next = _adjacentChapter(1);
+    if (next == null) {
+      _showEndHint(
+        _chaptersLoading ? 'Memuat daftar chapter…' : 'Ini chapter terakhir.',
+      );
+      return;
+    }
+    _openChapter(next);
+  }
+
+  void _goToPreviousChapter() {
+    final Chapter? previous = _adjacentChapter(-1);
+    if (previous == null) {
+      _showEndHint(
+        _chaptersLoading ? 'Memuat daftar chapter…' : 'Ini chapter pertama.',
+      );
+      return;
+    }
+    _openChapter(previous);
+  }
+
+  bool get _chaptersLoading =>
+      ref.read(chapterListProvider(widget.mangaId)).isLoading;
+
+  void _showEndHint(String message) {
+    if (_endHintShown) return;
+    _endHintShown = true;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    Future<void>.delayed(const Duration(seconds: 3), () {
+      if (mounted) _endHintShown = false;
+    });
   }
 
   /// Prefetch 2 halaman berikutnya agar geser terasa mulus.
@@ -476,6 +596,42 @@ class _PageIndicator extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Penutup chapter pada mode webtoon: tombol lanjut ke chapter berikutnya.
+class _ChapterFooter extends StatelessWidget {
+  const _ChapterFooter({required this.hasNext, required this.onNext});
+
+  final bool hasNext;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.l,
+        vertical: AppSpacing.xxl,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            hasNext ? 'Akhir chapter' : 'Chapter terakhir',
+            style: AppTypography.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+          if (hasNext) ...<Widget>[
+            const SizedBox(height: AppSpacing.m),
+            FilledButton.icon(
+              onPressed: onNext,
+              icon: const Icon(Icons.skip_next, size: 18),
+              label: const Text('Chapter berikutnya'),
+            ),
+          ],
+        ],
       ),
     );
   }

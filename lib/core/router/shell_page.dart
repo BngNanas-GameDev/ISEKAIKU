@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -47,7 +45,7 @@ class ShellPage extends StatelessWidget {
                 ),
                 selectedIcon: _AnimatedAssetIcon(
                   frames: <String>['assets/Beranda/b1.png', 'assets/Beranda/b2.png'],
-                  animate: true,
+                  selected: true,
                 ),
                 label: 'Beranda',
               ),
@@ -57,7 +55,7 @@ class ShellPage extends StatelessWidget {
                 ),
                 selectedIcon: _AnimatedAssetIcon(
                   frames: <String>['assets/Cari/s1.png', 'assets/Cari/s2.png'],
-                  animate: true,
+                  selected: true,
                 ),
                 label: 'Cari',
               ),
@@ -67,7 +65,7 @@ class ShellPage extends StatelessWidget {
                 ),
                 selectedIcon: _AnimatedAssetIcon(
                   frames: <String>['assets/Pustaka/p1.png', 'assets/Pustaka/p2.png'],
-                  animate: true,
+                  selected: true,
                 ),
                 label: 'Pustaka',
               ),
@@ -79,74 +77,37 @@ class ShellPage extends StatelessWidget {
   }
 }
 
-/// Ikon navigasi dari aset, beranimasi bergantian saat tab aktif.
+/// Ikon navigasi dari aset.
 ///
-/// Saat tidak aktif, hanya frame pertama yang ditampilkan agar hemat.
-class _AnimatedAssetIcon extends StatefulWidget {
+/// Tidak beranimasi berulang: frame 2 hanya saat tab aktif, frame 1 saat
+/// tidak aktif. Pergantiannya memakai cross-fade singkat.
+class _AnimatedAssetIcon extends StatelessWidget {
   const _AnimatedAssetIcon({
     required this.frames,
-    this.animate = false,
+    this.selected = false,
   });
 
   final List<String> frames;
-  final bool animate;
-
-  @override
-  State<_AnimatedAssetIcon> createState() => _AnimatedAssetIconState();
-}
-
-class _AnimatedAssetIconState extends State<_AnimatedAssetIcon> {
-  Timer? _timer;
-  int _frame = 0;
+  final bool selected;
 
   static const double _size = 26;
-  static const Duration _interval = Duration(milliseconds: 520);
-
-  @override
-  void initState() {
-    super.initState();
-    _syncAnimation();
-  }
-
-  @override
-  void didUpdateWidget(covariant _AnimatedAssetIcon oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.animate != widget.animate ||
-        oldWidget.frames.length != widget.frames.length) {
-      _syncAnimation();
-    }
-  }
-
-  void _syncAnimation() {
-    _timer?.cancel();
-    _frame = 0;
-    if (!widget.animate || widget.frames.length < 2) return;
-
-    _timer = Timer.periodic(_interval, (_) {
-      if (!mounted) return;
-      setState(() => _frame = (_frame + 1) % widget.frames.length);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final double dpr = MediaQuery.devicePixelRatioOf(context);
     final int cacheSize = (_size * dpr).round();
 
+    // Frame 2 milik tab aktif; frame 1 untuk tab lain.
+    final int index = selected && frames.length > 1 ? 1 : 0;
+
     return SizedBox(
       width: _size,
       height: _size,
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 240),
+        duration: const Duration(milliseconds: 180),
         child: Image.asset(
-          widget.frames[_frame.clamp(0, widget.frames.length - 1)],
-          key: ValueKey<int>(_frame),
+          frames[index],
+          key: ValueKey<int>(index),
           width: _size,
           height: _size,
           cacheWidth: cacheSize,
