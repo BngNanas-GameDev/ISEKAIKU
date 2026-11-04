@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_providers.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/sync/sync_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -22,6 +24,8 @@ class LibraryPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final followed = ref.watch(followedMangaProvider);
     final history = ref.watch(readingHistoryProvider);
+    final signedIn =
+        AppConfig.hasSupabase && ref.watch(currentUserProvider) != null;
 
     return DefaultTabController(
       length: 2,
@@ -39,13 +43,15 @@ class LibraryPage extends ConsumerWidget {
               ),
             PopupMenuButton<String>(
               tooltip: 'Backup Pustaka',
-              onSelected: (value) {
+              onSelected: (value) async {
                 if (value == 'export') {
                   _export(context, ref);
                 } else if (value == 'import') {
                   _import(context, ref);
                 } else if (value == 'account') {
                   showAccountDialog(context);
+                } else if (value == 'sync') {
+                  await _sync(context, ref);
                 }
               },
               itemBuilder: (context) => <PopupMenuEntry<String>>[
@@ -57,13 +63,20 @@ class LibraryPage extends ConsumerWidget {
                   value: 'import',
                   child: Text('Impor dari clipboard'),
                 ),
-                if (AppConfig.hasSupabase)
+                if (signedIn) ...<PopupMenuEntry<String>>[
                   const PopupMenuDivider(),
-                if (AppConfig.hasSupabase)
+                  const PopupMenuItem<String>(
+                    value: 'sync',
+                    child: Text('Sinkronkan sekarang'),
+                  ),
+                ],
+                if (AppConfig.hasSupabase) ...<PopupMenuEntry<String>>[
+                  const PopupMenuDivider(),
                   const PopupMenuItem<String>(
                     value: 'account',
                     child: Text('Akun & sinkronisasi'),
                   ),
+                ],
               ],
             ),
           ],
@@ -162,6 +175,23 @@ class LibraryPage extends ConsumerWidget {
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(error.message)));
     }
+  }
+
+  Future<void> _sync(BuildContext context, WidgetRef ref) async {
+    await ref.read(syncNotifierProvider.notifier).syncNow();
+    if (!context.mounted) return;
+
+    final state = ref.read(syncNotifierProvider);
+    final text = switch (state.phase) {
+      SyncPhase.done => 'Sinkronisasi selesai.',
+      SyncPhase.error => state.message ?? 'Sinkronisasi gagal.',
+      SyncPhase.syncing => 'Sinkronisasi berjalan…',
+      SyncPhase.idle => 'Tidak ada yang disinkronkan.',
+    };
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 }
 
