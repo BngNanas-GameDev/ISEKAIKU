@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/storage_providers.dart';
+import '../../core/storage/storage_service.dart';
 import 'data/library_backup.dart';
 import 'data/library_store.dart';
 import 'data/models/library_models.dart';
@@ -12,6 +13,36 @@ final libraryStoreProvider = Provider<LibraryStore>(
 final libraryBackupServiceProvider = Provider<LibraryBackupService>(
   (ref) => LibraryBackupService(ref.watch(libraryStoreProvider)),
 );
+
+/// Urutan tampilan tab Diikuti.
+enum LibrarySort { newest, titleAz }
+
+const String librarySortKey = 'library.sort';
+
+class LibrarySortNotifier extends StateNotifier<LibrarySort> {
+  LibrarySortNotifier(this._storage, LibrarySort initial) : super(initial);
+
+  final StorageService _storage;
+
+  void set(LibrarySort value) {
+    if (value == state) return;
+    state = value;
+    _storage.setString(
+      librarySortKey,
+      value == LibrarySort.titleAz ? 'title' : 'newest',
+    );
+  }
+}
+
+final librarySortProvider =
+    StateNotifierProvider<LibrarySortNotifier, LibrarySort>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  final raw = storage.getString(librarySortKey, fallback: 'newest');
+  return LibrarySortNotifier(
+    storage,
+    raw == 'title' ? LibrarySort.titleAz : LibrarySort.newest,
+  );
+});
 
 /// Daftar manga yang diikuti, urut dari yang terbaru.
 class FollowedNotifier extends StateNotifier<List<FollowedManga>> {

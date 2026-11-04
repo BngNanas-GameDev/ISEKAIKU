@@ -26,6 +26,14 @@ class LibraryPage extends ConsumerWidget {
     final history = ref.watch(readingHistoryProvider);
     final signedIn =
         AppConfig.hasSupabase && ref.watch(currentUserProvider) != null;
+    final sort = ref.watch(librarySortProvider);
+
+    final sortedFollowed = List<FollowedManga>.of(followed);
+    if (sort == LibrarySort.titleAz) {
+      sortedFollowed.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
+    }
 
     return DefaultTabController(
       length: 2,
@@ -52,9 +60,24 @@ class LibraryPage extends ConsumerWidget {
                   showAccountDialog(context);
                 } else if (value == 'sync') {
                   await _sync(context, ref);
+                } else if (value == 'sort_newest') {
+                  ref.read(librarySortProvider.notifier).set(LibrarySort.newest);
+                } else if (value == 'sort_title') {
+                  ref.read(librarySortProvider.notifier).set(LibrarySort.titleAz);
                 }
               },
               itemBuilder: (context) => <PopupMenuEntry<String>>[
+                CheckedPopupMenuItem<String>(
+                  value: 'sort_newest',
+                  checked: sort == LibrarySort.newest,
+                  child: const Text('Urutkan: Terbaru'),
+                ),
+                CheckedPopupMenuItem<String>(
+                  value: 'sort_title',
+                  checked: sort == LibrarySort.titleAz,
+                  child: const Text('Urutkan: Judul A–Z'),
+                ),
+                const PopupMenuDivider(),
                 const PopupMenuItem<String>(
                   value: 'export',
                   child: Text('Ekspor ke clipboard'),
@@ -94,7 +117,7 @@ class LibraryPage extends ConsumerWidget {
         ),
         body: TabBarView(
           children: <Widget>[
-            _FollowedTab(items: followed),
+            _FollowedTab(items: sortedFollowed),
             _HistoryTab(items: history),
           ],
         ),

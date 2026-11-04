@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/iseakaiku_wordmark.dart';
 import '../../features/library/presentation/library_page.dart';
+import '../../features/manga/presentation/browse_page.dart';
 import '../../features/manga/presentation/home_page.dart';
 import '../../features/manga/presentation/manga_detail_page.dart';
 import '../../features/manga/presentation/reader_page.dart';
@@ -28,6 +29,10 @@ final appRouter = GoRouter(
           builder: (context, state) => SearchPage(
             initialQuery: state.uri.queryParameters['q'] ?? '',
           ),
+        ),
+        GoRoute(
+          path: '/browse',
+          builder: (context, state) => const BrowsePage(),
         ),
         GoRoute(
           path: '/library',

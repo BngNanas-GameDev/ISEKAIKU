@@ -4,6 +4,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import 'mangadex_mapper.dart';
 import 'models/manga.dart';
+import 'models/manga_tag.dart';
 
 /// Pembungkus endpoint MangaDex API v5.
 ///
@@ -132,6 +133,52 @@ class MangaDexApi {
   Future<ChapterPages> pages(String chapterId) async {
     final json = await _getJson('/at-home/server/$chapterId', null);
     return MangaDexMapper.pages(chapterId, json);
+  }
+
+  /// Daftar tag untuk filter jelajah (hanya grup `genre`).
+  Future<List<MangaTag>> tags() async {
+    final json = await _getProbeJson('/manga/tag', null);
+    final data = (json['data'] as List<dynamic>? ?? <dynamic>[])
+        .cast<Map<String, dynamic>>();
+
+    final result = <MangaTag>[];
+    for (final item in data) {
+      final attributes =
+          item['attributes'] as Map<String, dynamic>? ?? <String, dynamic>{};
+      final group = attributes['group'] as String? ?? 'genre';
+      if (group != 'genre') continue;
+      final names = attributes['name'] as Map<String, dynamic>? ?? {};
+      final name = (names['en'] ?? names['id'] ?? '').toString();
+      final id = item['id'] as String? ?? '';
+      if (id.isEmpty || name.isEmpty) continue;
+      result.add(MangaTag(id: id, name: name, group: group));
+    }
+    result.sort((a, b) => a.name.compareTo(b.name));
+    return result;
+  }
+
+  /// Jelajah dengan filter genre, status, tahun, dan urutan.
+  Future<List<Manga>> browse({
+    required String language,
+    List<String> tagIds = const <String>[],
+    String? status,
+    int? year,
+    String order = 'followedCount',
+    int limit = 24,
+    int offset = 0,
+  }) async {
+    final json = await _getJson('/manga', <String, dynamic>{
+      'limit': limit,
+      'offset': offset,
+      'includes': _includeRelations,
+      'order[$order]': 'desc',
+      'contentRating': <String>['safe', 'suggestive'],
+      'availableTranslatedLanguage': <String>[language],
+      if (tagIds.isNotEmpty) 'includedTags': tagIds,
+      if (status != null) 'status': <String>[status],
+      if (year != null) 'year': year,
+    });
+    return MangaDexMapper.mangaList(json);
   }
 
   Future<Map<String, dynamic>> _getJson(

@@ -50,6 +50,14 @@ class HomePage extends ConsumerWidget {
                       const IsekaikuWordmark(size: 22),
                       const Spacer(),
                       IconButton(
+                        tooltip: 'Jelajah genre',
+                        onPressed: () => context.push('/browse'),
+                        icon: const Icon(
+                          Icons.tune,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      IconButton(
                         onPressed: () => context.go('/search'),
                         icon: const Icon(
                           Icons.search,

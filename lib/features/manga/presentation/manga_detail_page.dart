@@ -222,6 +222,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                   Wrap(
                     spacing: AppSpacing.s,
                     runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
                       _RangeBadge(label: availability.label),
                       if (availability.complete)
@@ -229,6 +230,35 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                           label: 'Lengkap',
                           highlight: true,
                         ),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 32),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () {
+                          final list = chapters.valueOrNull;
+                          if (list == null || list.isEmpty) return;
+                          ref.read(readChaptersProvider.notifier).markAllRead(
+                                manga.id,
+                                list.map((chapter) => chapter.id),
+                              );
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${list.length} chapter ditandai terbaca.',
+                                ),
+                              ),
+                            );
+                        },
+                        child: Text(
+                          'Tandai semua',
+                          style: AppTypography.labelSmall
+                              .copyWith(color: AppColors.primary),
+                        ),
+                      ),
                     ],
                   ),
                 ],
