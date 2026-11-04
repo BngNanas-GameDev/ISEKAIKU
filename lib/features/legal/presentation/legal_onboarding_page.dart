@@ -56,7 +56,7 @@ class _LegalOnboardingPageState extends ConsumerState<LegalOnboardingPage> {
             _LegalTile(
               icon: Icons.description_outlined,
               title: LegalContent.terms.title,
-              subtitle: 'Aturan penggunaan, forum, dan konten 18+',
+              subtitle: 'Aturan penggunaan, forum, dan usia',
               onTap: () => _open(LegalContent.terms),
             ),
             _LegalTile(
