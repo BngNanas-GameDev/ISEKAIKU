@@ -113,6 +113,9 @@ class RemoteLibrary {
   }
 
   Future<void> pull(String userId) async {
+    final deletedFollowed = _store.loadDeletedFollowed();
+    final deletedHistory = _store.loadDeletedHistory();
+
     // --- manga diikuti ---
     final followedRows = await _client
         .from('library_entries')
@@ -120,8 +123,12 @@ class RemoteLibrary {
         .eq('user_id', userId);
     final remoteFollowed = <FollowedManga>[];
     for (final row in (followedRows as List<dynamic>)) {
-      final mapped =
-          RemoteMapping.followedFromRow(row as Map<String, dynamic>);
+      final map = row as Map<String, dynamic>;
+      final mangaId = map['manga_id'];
+      if (mangaId is String && _deletedAfter(deletedFollowed, mangaId, map)) {
+        continue; // penghapusan lokal lebih baru dari data server
+      }
+      final mapped = RemoteMapping.followedFromRow(map);
       if (mapped != null) remoteFollowed.add(mapped);
     }
     if (remoteFollowed.isNotEmpty) {
@@ -137,8 +144,12 @@ class RemoteLibrary {
         .eq('user_id', userId);
     final remoteProgress = <ReadingHistoryEntry>[];
     for (final row in (progressRows as List<dynamic>)) {
-      final mapped =
-          RemoteMapping.progressFromRow(row as Map<String, dynamic>);
+      final map = row as Map<String, dynamic>;
+      final mangaId = map['manga_id'];
+      if (mangaId is String && _deletedAfter(deletedHistory, mangaId, map)) {
+        continue;
+      }
+      final mapped = RemoteMapping.progressFromRow(map);
       if (mapped != null) remoteProgress.add(mapped);
     }
     if (remoteProgress.isNotEmpty) {
@@ -168,7 +179,48 @@ class RemoteLibrary {
     }
   }
 
+  /// True bila [mangaId] pernah dihapus lokal dan tidak ada data server yang
+  /// lebih baru (mis. di-follow ulang dari perangkat lain).
+  bool _deletedAfter(
+    Map<String, DateTime> deleted,
+    String mangaId,
+    Map<String, dynamic> row,
+  ) {
+    final deletion = deleted[mangaId];
+    if (deletion == null) return false;
+    final updated = _parseTime(row['updated_at']);
+    if (updated == null) return true;
+    return !updated.isAfter(deletion);
+  }
+
+  DateTime? _parseTime(Object? value) {
+    if (value is! String) return null;
+    return DateTime.tryParse(value)?.toLocal();
+  }
+
   Future<void> push(String userId) async {
+    // Kirim penghapusan lebih dulu, supaya server tidak lagi menyimpan data
+    // yang sudah tidak diikuti pengguna.
+    final deletedFollowed = _store.loadDeletedFollowed();
+    if (deletedFollowed.isNotEmpty) {
+      await _client
+          .from('library_entries')
+          .delete()
+          .eq('user_id', userId)
+          .inFilter('manga_id', deletedFollowed.keys.toList());
+      await _store.clearDeletedFollowed();
+    }
+
+    final deletedHistory = _store.loadDeletedHistory();
+    if (deletedHistory.isNotEmpty) {
+      await _client
+          .from('reading_progress')
+          .delete()
+          .eq('user_id', userId)
+          .inFilter('manga_id', deletedHistory.keys.toList());
+      await _store.clearDeletedHistory();
+    }
+
     final followed = _store.loadFollowed();
     if (followed.isNotEmpty) {
       await _client.from('library_entries').upsert(

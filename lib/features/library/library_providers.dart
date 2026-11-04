@@ -65,6 +65,8 @@ class FollowedNotifier extends StateNotifier<List<FollowedManga>> {
   void remove(String mangaId) {
     state = state.where((e) => e.id != mangaId).toList();
     _store.saveFollowed(state);
+    // Tombstone: supaya sync berikutnya tidak memunculkannya lagi.
+    _store.recordDeletedFollowed(mangaId);
   }
 
   /// Muat ulang dari penyimpanan (dipakai setelah impor backup).
@@ -106,11 +108,16 @@ class HistoryNotifier extends StateNotifier<List<ReadingHistoryEntry>> {
   void remove(String mangaId) {
     state = state.where((e) => e.mangaId != mangaId).toList();
     _store.saveHistory(state);
+    _store.recordDeletedHistory(mangaId);
   }
 
   void clear() {
+    final ids = state.map((e) => e.mangaId).toSet();
     state = const <ReadingHistoryEntry>[];
     _store.saveHistory(state);
+    for (final id in ids) {
+      _store.recordDeletedHistory(id);
+    }
   }
 
   /// Chapter terakhir yang dibaca untuk manga ini, kalau ada.

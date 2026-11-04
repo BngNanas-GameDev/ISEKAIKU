@@ -16,6 +16,10 @@ class LibraryStore {
   static const String historyKey = 'library.history';
   static const String readChaptersKey = 'library.readChapters';
 
+  /// Catatan penghapusan agar sinkronisasi tidak menghidupkan data lagi.
+  static const String deletedFollowedKey = 'library.deletedFollowed';
+  static const String deletedHistoryKey = 'library.deletedHistory';
+
   /// Batas riwayat agar tidak tumbuh tanpa henti.
   static const int historyLimit = 100;
 
@@ -82,6 +86,56 @@ class LibraryStore {
     };
     return _storage.setString(readChaptersKey, jsonEncode(encoded));
   }
+
+  // --- tombstone (penghapusan) -------------------------------------------
+
+  /// Waktu penghapusan per manga, untuk [deletedFollowedKey]/[deletedHistoryKey].
+  Map<String, DateTime> _loadDeletes(String key) {
+    final raw = _storage.getString(key);
+    if (raw.isEmpty) return <String, DateTime>{};
+    try {
+      final dynamic decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return <String, DateTime>{};
+      final result = <String, DateTime>{};
+      decoded.forEach((String id, dynamic value) {
+        final parsed = DateTime.tryParse(value?.toString() ?? '');
+        if (parsed != null) result[id] = parsed;
+      });
+      return result;
+    } on FormatException {
+      return <String, DateTime>{};
+    }
+  }
+
+  Future<void> _saveDeletes(String key, Map<String, DateTime> map) {
+    return _storage.setString(
+      key,
+      jsonEncode(<String, String>{
+        for (final entry in map.entries)
+          entry.key: entry.value.toUtc().toIso8601String(),
+      }),
+    );
+  }
+
+  Map<String, DateTime> loadDeletedFollowed() => _loadDeletes(deletedFollowedKey);
+
+  Future<void> recordDeletedFollowed(String mangaId) {
+    final map = loadDeletedFollowed()..[mangaId] = DateTime.now();
+    return _saveDeletes(deletedFollowedKey, map);
+  }
+
+  Future<void> clearDeletedFollowed() =>
+      _saveDeletes(deletedFollowedKey, <String, DateTime>{});
+
+  Map<String, DateTime> loadDeletedHistory() => _loadDeletes(deletedHistoryKey);
+
+  Future<void> recordDeletedHistory(String mangaId) {
+    final map = loadDeletedHistory()..[mangaId] = DateTime.now();
+    return _saveDeletes(deletedHistoryKey, map);
+  }
+
+  Future<void> clearDeletedHistory() =>
+      _saveDeletes(deletedHistoryKey, <String, DateTime>{});
 
   Map<String, dynamic>? _decode(String raw) {
     try {
