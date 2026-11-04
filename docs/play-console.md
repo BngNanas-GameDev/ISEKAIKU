@@ -21,6 +21,21 @@ seksual eksplisit; gate usia tidak membuatnya otomatis diizinkan.
   - berjalan **14 hari berturut-turut** sebelum bisa mengajukan akses produksi.
 - Akun organisasi tidak terkena aturan 12 penguji.
 
+### SHA-1 untuk login Google (sering terlewat)
+
+Build dari Play **ditandatangani ulang** oleh Play App Signing, jadi SHA-1
+keystore lokal **tidak dipakai** di perangkat penguji. Yang harus didaftarkan
+di Google Cloud → Credentials → OAuth client Android:
+
+1. SHA-1 **upload key** (untuk build lokal/APK):
+   `E8:06:2E:6A:16:71:FA:17:91:62:77:03:4E:C9:61:FC:0C:BA:A0:3C`
+2. SHA-1 **Play App Signing** — salin dari
+   **Play Console → Setup → App integrity → App signing key certificate**.
+   Daftarkan juga di OAuth client Android yang sama.
+
+Tanpa langkah 2, tombol “Masuk dengan Google” gagal di build Play dan review
+akan ditolak pada bagian *App access*.
+
 ## 2. Buat aplikasi
 
 - **Nama**: `Isekaiku`
@@ -37,16 +52,40 @@ URL setelah GitHub Pages aktif (Settings → Pages → `main` / `/docs`):
 https://bngnanas-gamedev.github.io/ISEKAIKU/privacy.html
 ```
 
-### App access
-- Membaca manga bisa tanpa login.
-- Forum dan sinkronisasi memerlukan login Google.
-- Pilih **“All or some functionality is restricted”**, lalu beri instruksi:
-  ```
-  Baca manga: langsung tanpa akun.
-  Forum/Pustaka sinkron: masuk dengan akun penguji di bawah.
-  ```
-- Siapkan **akun Google penguji** (jangan akun pribadi) dan tuliskan
-  email + password di kolom instruksi. Hapus aksesnya setelah review.
+### App access (login untuk reviewer)
+
+Pilih **“All or some functionality is restricted”** — bukan “All functionality
+is restricted”, karena baca manga tetap bisa tanpa akun. Setelah itu klik
+**Add new instructions** dan isi:
+
+| Kolom | Isi |
+|---|---|
+| **Name** | `Akun penguji` |
+| **Username** | email akun Google khusus, mis. `isekaiku.review@gmail.com` |
+| **Password** | password akun tersebut |
+| **Instructions** | template di bawah |
+
+```
+Baca manga (Beranda, Cari, Detail, Reader): bisa tanpa login.
+
+Fitur yang butuh login (gunakan akun di atas):
+1. Buka tab Profil (ikon paling kanan) → "Masuk dengan Google".
+2. Pilih akun penguji. Jika muncul consent screen, setujui.
+3. Isi tanggal lahir sekali (mis. 1990-01-01). Tidak bisa diubah lagi.
+4. Forum: tab Forum → buat topik/balasan.
+5. Sinkronisasi: simpan manga ke Pustaka, lalu cek tab Pustaka.
+
+Catatan: konten 18+ tidak tersedia di build Play Store.
+```
+
+Syarat akun penguji:
+- Buat **akun Google baru khusus review**, jangan akun pribadi.
+- **Jangan aktifkan 2FA** dan jangan pakai verifikasi nomor HP.
+- Tambahkan akun itu di **Google Cloud → OAuth consent screen → Test users**
+  selama status aplikasi OAuth masih *Testing*.
+- Setelah review selesai: ganti password atau hapus aksesnya.
+- Untuk fitur yang butuh login, Play **wajib** bisa masuk — kalau login gagal,
+  review ditolak dengan alasan "app access".
 
 ### Ads
 - **Tidak ada iklan.**
