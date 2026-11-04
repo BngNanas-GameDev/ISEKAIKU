@@ -22,6 +22,17 @@ class AppConfig {
   /// Google OAuth client ID (untuk login Google).
   static const String googleClientId = String.fromEnvironment('ISEKAIKU_CID');
 
+  /// Stream key widget QR Saweria (donasi QRIS).
+  static const String saweriaStreamKey = String.fromEnvironment(
+    'SAWERIA_STREAM_KEY',
+  );
+
+  static bool get hasSaweria => saweriaStreamKey.isNotEmpty;
+
+  /// URL widget QR Saweria. Kosong bila belum dikonfigurasi.
+  static String get saweriaQrUrl =>
+      'https://saweria.co/widgets/qr?streamKey=$saweriaStreamKey';
+
   static bool get hasSupabase =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 
