@@ -90,6 +90,9 @@ flutter:
     - assets/fonts/NOTICE-Asimov.txt
     - assets/donate/
     - assets/icon/
+    - assets/Beranda/
+    - assets/Cari/
+    - assets/Pustaka/
 
 # --- Ikon launcher & splash -------------------------------------------------
 # Jalankan ulang setelah mengganti gambar:
