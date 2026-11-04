@@ -185,13 +185,20 @@ Manga-first sampai rilis. Anime ditunda sampai aplikasi terbukti dipakai.
 - [x] M3 Kedalaman baca: progres halaman, kartu "Lanjut baca", badge rentang
       chapter + Lengkap, sembunyikan judul tanpa chapter, bahasa ketat,
       ekspor/impor Pustaka, filter moderasi
-- [ ] M4 Import koleksi lokal (folder/CBZ), jelajah genre/filter, riwayat
-      pencarian, urutkan Pustaka
+- [ ] M4 Kedalaman katalog: jelajah genre/tag + filter (status, tahun,
+      rating), riwayat pencarian, urutkan/filter Pustaka, tandai semua
+      terbaca
 - [ ] M5 Rilis: skeleton/empty state, hemat data, lokalisasi, ikon adaptif,
       splash, release signing, QA
 - [ ] M6 (pasca-rilis) Akun Supabase + sinkronisasi Pustaka
 - [ ] M7 (pasca-rilis) Komentar/forum per manga
 - [ ] M8 (ditunda) Anime: koleksi lokal, provider video, player media_kit
+
+### Dibatalkan
+
+- ~~Import koleksi lokal (folder/CBZ/PDF)~~ — media tidak disimpan di
+  Supabase (kuota free tier 1 GB), dan akses lewat SAF/Drive terlalu lambat
+  untuk volume ratusan halaman. Fokus katalog tetap di MangaDex.
 
 ## Akun & sinkronisasi (persiapan)
 
