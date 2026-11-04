@@ -20,6 +20,10 @@ class AccountRepository {
   ///
   /// Keunikan nickname dijaga index `lower(username)` di server; bentrok
   /// muncul sebagai error 23505.
+  Future<void> deleteAccount() async {
+    await _client.rpc('delete_my_account');
+  }
+
   Future<void> updateProfile({
     required String userId,
     required String username,

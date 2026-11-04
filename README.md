@@ -231,6 +231,8 @@ Skema backend opsional ada di:
   tanpa membedakan huruf besar/kecil.
 - `supabase/migrations/0006_report_user.sql` - laporan pengguna untuk
   kepatuhan UGC Play.
+- `supabase/migrations/0007_delete_account.sql` - hapus akun dari aplikasi
+  (syarat Play).
 
 Semuanya lengkap dengan **RLS** dan **trigger moderasi** server-side.
 

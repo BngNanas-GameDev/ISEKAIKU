@@ -171,8 +171,8 @@ abstract class LegalContent {
         body:
             'Data akun dan forum disimpan selama akun aktif. Data yang kamu '
             'hapus (unfollow, hapus riwayat, hapus topik/balasan) ikut '
-            'dihapus dari server pada sinkronisasi berikutnya. Kamu dapat '
-            'meminta penghapusan akun melalui halaman kontak.',
+            'dihapus dari server pada sinkronisasi berikutnya. Akun beserta '
+            'seluruh datanya dapat dihapus langsung lewat Akun → Hapus akun.',
       ),
       LegalSection(
         title: '6. Keamanan',
@@ -193,10 +193,10 @@ abstract class LegalContent {
         title: '8. Hak kamu',
         body:
             'Kamu berhak mengakses, memperbaiki (bio), atau menghapus data '
-            'milikmu. Tanggal lahir tidak dapat diubah sendiri; bila ada '
-            'kesalahan pengisian, hubungi kami melalui $contactLabel dengan '
-            'bukti yang sesuai. Untuk permintaan penghapusan akun/data, '
-            'gunakan kontak yang sama.',
+            'milikmu. Akun dan seluruh data terkait dapat dihapus lewat '
+            'Akun → Hapus akun. Tanggal lahir tidak dapat diubah sendiri; '
+            'bila ada kesalahan pengisian, hubungi kami melalui '
+            '$contactLabel dengan bukti yang sesuai.',
       ),
       LegalSection(
         title: '9. Perubahan kebijakan',

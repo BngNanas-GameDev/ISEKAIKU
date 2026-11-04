@@ -42,8 +42,8 @@ dipisah per akun. Menghapus data aplikasi akan menghapus data lokal tersebut.
 
 Data akun dan forum disimpan selama akun aktif. Data yang kamu hapus
 (unfollow, hapus riwayat, hapus topik/balasan) ikut dihapus dari server pada
-sinkronisasi berikutnya. Permintaan penghapusan akun dapat dikirim lewat
-kontak.
+sinkronisasi berikutnya. Akun beserta seluruh datanya dapat dihapus langsung
+lewat **Akun → Hapus akun**.
 
 ## 6. Keamanan
 
@@ -58,6 +58,7 @@ untuk 18 tahun ke atas dan memerlukan akun.
 ## 8. Hak kamu
 
 Kamu berhak mengakses, memperbaiki (bio), atau menghapus data milikmu.
+Akun dan seluruh data terkait dapat dihapus lewat **Akun → Hapus akun**.
 Tanggal lahir tidak dapat diubah sendiri; bila ada kesalahan pengisian,
 hubungi kami dengan bukti yang sesuai.
 

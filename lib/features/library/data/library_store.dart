@@ -151,6 +151,15 @@ class LibraryStore {
     return _storage.setString(readChaptersKey, jsonEncode(encoded));
   }
 
+  /// Hapus seluruh data lokal scope ini (dipakai saat hapus akun).
+  Future<void> clearAll() async {
+    await _storage.remove(followedKey);
+    await _storage.remove(historyKey);
+    await _storage.remove(readChaptersKey);
+    await _storage.remove(deletedFollowedKey);
+    await _storage.remove(deletedHistoryKey);
+  }
+
   // --- tombstone (penghapusan) -------------------------------------------
 
   /// Waktu penghapusan per manga, untuk [deletedFollowedKey]/[deletedHistoryKey].

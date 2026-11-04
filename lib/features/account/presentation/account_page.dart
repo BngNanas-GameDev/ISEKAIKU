@@ -12,6 +12,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../forum/data/models/forum_models.dart';
 import '../../forum/forum_providers.dart';
 import '../../forum/presentation/widgets/forum_widgets.dart';
+import '../../library/library_providers.dart';
 import '../account_providers.dart';
 import '../data/models/profile_models.dart';
 import '../data/profile_validation.dart';
@@ -295,9 +296,84 @@ class _ProfileView extends ConsumerWidget {
               ];
             },
           ),
+          const SizedBox(height: AppSpacing.l),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(
+              Icons.delete_forever_outlined,
+              color: AppColors.error,
+            ),
+            title: Text(
+              'Hapus akun',
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.error),
+            ),
+            subtitle: Text(
+              'Menghapus akun, Pustaka, dan konten forum secara permanen.',
+              style: AppTypography.labelSmall,
+            ),
+            onTap: () => _deleteAccount(context, ref),
+          ),
+          const SizedBox(height: AppSpacing.l),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainer,
+        title: const Text(
+          'Hapus akun permanen?',
+          style: AppTypography.titleMedium,
+        ),
+        content: const Text(
+          'Akun Google tetap ada, tetapi profil Isekaiku, Pustaka, riwayat '
+          'baca, dan seluruh topik/balasan forum akan dihapus permanen dan '
+          'tidak bisa dipulihkan.',
+          style: AppTypography.bodySmall,
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.background,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Hapus permanen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(accountRepositoryProvider).deleteAccount();
+      await ref.read(libraryStoreProvider).clearAll();
+
+      // Akun sudah terhapus; kegagalan signOut lokal tidak mengubah hasil.
+      try {
+        await ref.read(authServiceProvider).signOut();
+      } catch (_) {
+        // abaikan
+      }
+
+      if (context.mounted) context.go('/');
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Gagal menghapus akun. Coba lagi atau hubungi kami.'),
+          ),
+        );
+    }
   }
 
   Future<void> _editProfile(

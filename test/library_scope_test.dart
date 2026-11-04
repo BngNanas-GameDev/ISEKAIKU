@@ -104,4 +104,20 @@ void main() {
     expect(guest.loadHistory(), isEmpty);
     expect(storage.getStringList(LibraryStore.legacyHistoryKey), isNotEmpty);
   });
+
+  test('clearAll menghapus data scope ini saja', () async {
+    final storage = await StorageService.create();
+    final storeA = LibraryStore(storage, scope: 'user-a');
+    final storeB = LibraryStore(storage, scope: 'user-b');
+
+    await storeA.saveHistory(<ReadingHistoryEntry>[entry('a')]);
+    await storeA.recordDeletedHistory('a');
+    await storeB.saveHistory(<ReadingHistoryEntry>[entry('b')]);
+
+    await storeA.clearAll();
+
+    expect(storeA.loadHistory(), isEmpty);
+    expect(storeA.loadDeletedHistory(), isEmpty);
+    expect(storeB.loadHistory().map((e) => e.mangaId), <String>['b']);
+  });
 }

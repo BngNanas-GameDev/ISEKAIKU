@@ -80,7 +80,8 @@ Jawab jujur. Untuk build PlaySafe:
 | ID pengguna | Ya | Tidak | Akun/sinkronisasi |
 
 - Terenkripsi saat transit: **ya**.
-- Pengguna bisa minta hapus data: **ya** (via GitHub Issues).
+- Pengguna bisa minta hapus data: **ya** — tombol **Akun → Hapus akun**
+  (langsung menghapus akun, Pustaka, dan konten forum).
 - Tidak ada iklan/tracking pihak ketiga.
 
 ### Deklarasi lain
@@ -145,6 +146,8 @@ Checklist penguji:
 - [ ] Pustaka & riwayat tidak tercampur antar akun.
 - [ ] Forum: tulis, balas, lapor, hapus.
 - [ ] Forward manga di Rekomendasi.
+- [ ] Blokir & lapor pengguna menyembunyikan konten.
+- [ ] Hapus akun (pakai akun uji khusus) benar-benar menghapus data.
 - [ ] Hemat data & mode webtoon.
 - [ ] Tidak ada crash saat pindah tab.
 
