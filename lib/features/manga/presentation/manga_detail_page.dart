@@ -269,11 +269,13 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         ),
         ...switch (chapters) {
           AsyncData(:final value) when value.isEmpty => <Widget>[
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.l),
+                  padding: const EdgeInsets.all(AppSpacing.l),
                   child: Text(
-                    'Belum ada chapter yang bisa dibaca.',
+                    'Belum ada chapter ${language.toUpperCase()} yang bisa '
+                    'dibaca. Coba bahasa lain di atas. Jika judul ini '
+                    'berating Erotika, aktifkan "Konten 18+" di menu Pustaka.',
                     style: AppTypography.bodySmall,
                   ),
                 ),

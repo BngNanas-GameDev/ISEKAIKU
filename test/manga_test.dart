@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:isekaiku/features/manga/data/mangadex_api.dart';
 import 'package:isekaiku/features/manga/data/models/manga.dart';
 import 'package:isekaiku/features/manga/manga_providers.dart';
 
@@ -45,5 +46,22 @@ void main() {
 
     final result = await container.read(searchResultsProvider('').future);
     expect(result, isEmpty);
+  });
+
+  group('rating konten', () {
+    test('bawaan hanya safe dan suggestive', () {
+      expect(MangaDexApi.contentRatings(adult: false), <String>[
+        'safe',
+        'suggestive',
+      ]);
+    });
+
+    test('mode 18+ menyertakan erotika dan dewasa', () {
+      final ratings = MangaDexApi.contentRatings(adult: true);
+      expect(
+        ratings,
+        containsAll(<String>['safe', 'suggestive', 'erotica', 'pornographic']),
+      );
+    });
   });
 }

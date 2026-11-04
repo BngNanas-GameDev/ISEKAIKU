@@ -12,7 +12,11 @@ class _FakeApi extends MangaDexApi {
   int calls = 0;
 
   @override
-  Future<int> chapterCount(String mangaId, {required String language}) async {
+  Future<int> chapterCount(
+    String mangaId, {
+    required String language,
+    bool adult = false,
+  }) async {
     calls++;
     final value = counts[mangaId];
     if (value == null) throw Exception('jaringan gagal');
@@ -49,8 +53,8 @@ void main() {
     await service.count('a', 'en');
 
     expect(api.calls, 2);
-    expect(storage.getString('avail.id.a'), isNotEmpty);
-    expect(storage.getString('avail.en.a'), isNotEmpty);
+    expect(storage.getString('avail.id.std.a'), isNotEmpty);
+    expect(storage.getString('avail.en.std.a'), isNotEmpty);
   });
 
   test('cache kedaluwarsa memicu panggilan ulang', () async {
@@ -62,7 +66,7 @@ void main() {
     final old = DateTime.now()
         .subtract(ChapterAvailability.ttl + const Duration(minutes: 5))
         .millisecondsSinceEpoch;
-    await storage.setString('avail.id.a', '$old|3');
+    await storage.setString('avail.id.std.a', '$old|3');
 
     expect(await service.count('a', 'id'), 3);
     expect(api.calls, 1, reason: 'cache kedaluwarsa harus diambil ulang');

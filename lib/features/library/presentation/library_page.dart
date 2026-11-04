@@ -11,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../account/presentation/account_dialog.dart';
+import '../../manga/manga_providers.dart';
 import '../../manga/presentation/widgets/manga_card.dart';
 import '../data/library_backup.dart';
 import '../data/models/library_models.dart';
@@ -27,6 +28,7 @@ class LibraryPage extends ConsumerWidget {
     final signedIn =
         AppConfig.hasSupabase && ref.watch(currentUserProvider) != null;
     final sort = ref.watch(librarySortProvider);
+    final bool adult = ref.watch(showAdultContentProvider);
 
     final sortedFollowed = List<FollowedManga>.of(followed);
     if (sort == LibrarySort.titleAz) {
@@ -61,9 +63,15 @@ class LibraryPage extends ConsumerWidget {
                 } else if (value == 'sync') {
                   await _sync(context, ref);
                 } else if (value == 'sort_newest') {
-                  ref.read(librarySortProvider.notifier).set(LibrarySort.newest);
+                  ref
+                      .read(librarySortProvider.notifier)
+                      .set(LibrarySort.newest);
                 } else if (value == 'sort_title') {
-                  ref.read(librarySortProvider.notifier).set(LibrarySort.titleAz);
+                  ref
+                      .read(librarySortProvider.notifier)
+                      .set(LibrarySort.titleAz);
+                } else if (value == 'adult') {
+                  await _toggleAdult(context, ref);
                 } else if (value == 'donate') {
                   context.push('/donate');
                 }
@@ -78,6 +86,12 @@ class LibraryPage extends ConsumerWidget {
                   value: 'sort_title',
                   checked: sort == LibrarySort.titleAz,
                   child: const Text('Urutkan: Judul A–Z'),
+                ),
+                const PopupMenuDivider(),
+                CheckedPopupMenuItem<String>(
+                  value: 'adult',
+                  checked: adult,
+                  child: const Text('Konten 18+ (Erotika)'),
                 ),
                 const PopupMenuDivider(),
                 const PopupMenuItem<String>(
@@ -158,6 +172,56 @@ class LibraryPage extends ConsumerWidget {
     if (confirmed == true) {
       ref.read(readingHistoryProvider.notifier).clear();
     }
+  }
+
+  /// Nyalakan/matikan judul rating erotika & dewasa.
+  ///
+  /// MangaDex menyembunyikan rating tersebut dari API kecuali diminta, jadi
+  /// tanpa opsi ini judul 18+ tidak akan pernah muncul di pencarian.
+  Future<void> _toggleAdult(BuildContext context, WidgetRef ref) async {
+    final bool active = ref.read(showAdultContentProvider);
+    if (active) {
+      ref.read(showAdultContentProvider.notifier).set(false);
+      _invalidateCatalog(ref);
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainer,
+        title: const Text(
+          'Aktifkan konten 18+?',
+          style: AppTypography.titleMedium,
+        ),
+        content: const Text(
+          'Judul dengan rating Erotika dan Dewasa akan muncul di Beranda, '
+          'Jelajah, dan Pencarian.\n\n'
+          'Dengan mengaktifkan, kamu menyatakan berusia 18 tahun ke atas.',
+          style: AppTypography.bodySmall,
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Aktifkan'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    ref.read(showAdultContentProvider.notifier).set(true);
+    _invalidateCatalog(ref);
+  }
+
+  void _invalidateCatalog(WidgetRef ref) {
+    ref.invalidate(popularMangaProvider);
+    ref.invalidate(latestMangaProvider);
+    ref.invalidate(browseResultsProvider);
   }
 
   Future<void> _export(BuildContext context, WidgetRef ref) async {
@@ -309,10 +373,7 @@ class _ImportDialogState extends State<_ImportDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Batal'),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('Impor'),
-        ),
+        FilledButton(onPressed: _submit, child: const Text('Impor')),
       ],
     );
   }
@@ -387,7 +448,10 @@ class _FollowedCard extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceContainer,
-        title: const Text('Berhenti mengikuti?', style: AppTypography.titleMedium),
+        title: const Text(
+          'Berhenti mengikuti?',
+          style: AppTypography.titleMedium,
+        ),
         content: Text(
           item.title,
           style: AppTypography.bodySmall,
@@ -545,7 +609,11 @@ class _EmptyState extends StatelessWidget {
           children: <Widget>[
             Icon(icon, size: 44, color: AppColors.onSurfaceVariant),
             const SizedBox(height: AppSpacing.m),
-            Text(title, style: AppTypography.titleMedium, textAlign: TextAlign.center),
+            Text(
+              title,
+              style: AppTypography.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AppSpacing.s),
             Text(
               subtitle,

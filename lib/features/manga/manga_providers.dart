@@ -26,17 +26,18 @@ const String readerWebtoonKey = 'reader.webtoon';
 /// Persisten: pilihan terakhir dipakai lagi saat aplikasi dibuka ulang.
 final chapterLanguageProvider =
     StateNotifierProvider<PersistentStringNotifier, String>((ref) {
-  final storage = ref.watch(storageServiceProvider);
-  return PersistentStringNotifier(
-    storage,
-    readerLanguageKey,
-    storage.getString(readerLanguageKey, fallback: 'id'),
-  );
-});
+      final storage = ref.watch(storageServiceProvider);
+      return PersistentStringNotifier(
+        storage,
+        readerLanguageKey,
+        storage.getString(readerLanguageKey, fallback: 'id'),
+      );
+    });
 
 /// Kualitas gambar reader: true = data-saver (hemat kuota).
-final dataSaverProvider =
-    StateNotifierProvider<PersistentBoolNotifier, bool>((ref) {
+final dataSaverProvider = StateNotifierProvider<PersistentBoolNotifier, bool>((
+  ref,
+) {
   final storage = ref.watch(storageServiceProvider);
   return PersistentBoolNotifier(
     storage,
@@ -45,69 +46,97 @@ final dataSaverProvider =
   );
 });
 
-/// Mode reader: true = webtoon (scroll vertikal), false = paged.
-final webtoonModeProvider =
+/// Tampilkan judul dengan rating erotika/dewasa (18+).
+///
+/// Nonaktif secara bawaan: MangaDex menyembunyikan judul rating `erotica`
+/// dan `pornographic` dari daftar, sehingga judul seperti itu tidak muncul
+/// di pencarian sampai opsi ini dinyalakan.
+const String catalogAdultKey = 'catalog.showAdult';
+
+final showAdultContentProvider =
     StateNotifierProvider<PersistentBoolNotifier, bool>((ref) {
-  final storage = ref.watch(storageServiceProvider);
-  return PersistentBoolNotifier(
-    storage,
-    readerWebtoonKey,
-    storage.getBool(readerWebtoonKey, fallback: false),
-  );
-});
+      final storage = ref.watch(storageServiceProvider);
+      return PersistentBoolNotifier(
+        storage,
+        catalogAdultKey,
+        storage.getBool(catalogAdultKey, fallback: false),
+      );
+    });
+
+/// Mode reader: true = webtoon (scroll vertikal), false = paged.
+final webtoonModeProvider = StateNotifierProvider<PersistentBoolNotifier, bool>(
+  (ref) {
+    final storage = ref.watch(storageServiceProvider);
+    return PersistentBoolNotifier(
+      storage,
+      readerWebtoonKey,
+      storage.getBool(readerWebtoonKey, fallback: false),
+    );
+  },
+);
 
 /// Manga populer untuk beranda.
 ///
 /// Judul yang tidak punya chapter pada bahasa terpilih disaring keluar.
-final popularMangaProvider =
-    FutureProvider.autoDispose<List<Manga>>((ref) async {
+final popularMangaProvider = FutureProvider.autoDispose<List<Manga>>((
+  ref,
+) async {
   final language = ref.watch(chapterLanguageProvider);
+  final adult = ref.watch(showAdultContentProvider);
   final list = await ref
       .watch(mangaDexApiProvider)
-      .popular(limit: 20, language: language);
+      .popular(limit: 20, language: language, adult: adult);
   return ref
       .watch(chapterAvailabilityProvider)
-      .filterAvailable(list, (manga) => manga.id, language);
+      .filterAvailable(list, (manga) => manga.id, language, adult: adult);
 });
 
 /// Manga terbaru untuk beranda.
-final latestMangaProvider =
-    FutureProvider.autoDispose<List<Manga>>((ref) async {
+final latestMangaProvider = FutureProvider.autoDispose<List<Manga>>((
+  ref,
+) async {
   final language = ref.watch(chapterLanguageProvider);
+  final adult = ref.watch(showAdultContentProvider);
   final list = await ref
       .watch(mangaDexApiProvider)
-      .latest(limit: 20, language: language);
+      .latest(limit: 20, language: language, adult: adult);
   return ref
       .watch(chapterAvailabilityProvider)
-      .filterAvailable(list, (manga) => manga.id, language);
+      .filterAvailable(list, (manga) => manga.id, language, adult: adult);
 });
 
-final mangaDetailProvider =
-    FutureProvider.autoDispose.family<Manga, String>((ref, id) {
+final mangaDetailProvider = FutureProvider.autoDispose.family<Manga, String>((
+  ref,
+  id,
+) {
   return ref.watch(mangaDexApiProvider).byId(id);
 });
 
-final chapterListProvider =
-    FutureProvider.autoDispose.family<List<Chapter>, String>((ref, mangaId) {
-  final language = ref.watch(chapterLanguageProvider);
-  return ref.watch(mangaDexApiProvider).chapters(mangaId, language: language);
-});
+final chapterListProvider = FutureProvider.autoDispose
+    .family<List<Chapter>, String>((ref, mangaId) {
+      final language = ref.watch(chapterLanguageProvider);
+      final adult = ref.watch(showAdultContentProvider);
+      return ref
+          .watch(mangaDexApiProvider)
+          .chapters(mangaId, language: language, adult: adult);
+    });
 
-final chapterPagesProvider =
-    FutureProvider.autoDispose.family<ChapterPages, String>((ref, chapterId) {
-  return ref.watch(mangaDexApiProvider).pages(chapterId);
-});
+final chapterPagesProvider = FutureProvider.autoDispose
+    .family<ChapterPages, String>((ref, chapterId) {
+      return ref.watch(mangaDexApiProvider).pages(chapterId);
+    });
 
 /// Hasil pencarian berdasarkan kata kunci.
-final searchResultsProvider =
-    FutureProvider.autoDispose.family<List<Manga>, String>((ref, query) async {
-  if (query.trim().isEmpty) return <Manga>[];
-  final language = ref.watch(chapterLanguageProvider);
-  final list = await ref.watch(mangaDexApiProvider).search(query.trim());
-  return ref
-      .watch(chapterAvailabilityProvider)
-      .filterAvailable(list, (manga) => manga.id, language);
-});
+///
+/// Pencarian **tidak** menyaring judul tanpa chapter: kalau pengguna mencari
+/// judul tertentu, hasilnya harus tetap muncul. Halaman detail yang akan
+/// menjelaskan bila chapter pada bahasa aktif belum tersedia.
+final searchResultsProvider = FutureProvider.autoDispose
+    .family<List<Manga>, String>((ref, query) async {
+      if (query.trim().isEmpty) return <Manga>[];
+      final adult = ref.watch(showAdultContentProvider);
+      return ref.watch(mangaDexApiProvider).search(query.trim(), adult: adult);
+    });
 
 // ---------------------------------------------------------------------------
 // Jelajah (genre + filter)
@@ -134,8 +163,7 @@ class BrowseFilter {
   final int? year;
   final BrowseOrder order;
 
-  bool get isEmpty =>
-      tagIds.isEmpty && status == null && year == null;
+  bool get isEmpty => tagIds.isEmpty && status == null && year == null;
 
   BrowseFilter copyWith({
     Set<String>? tagIds,
@@ -196,14 +224,16 @@ class BrowseFilterNotifier extends StateNotifier<BrowseFilter> {
 
 final browseFilterProvider =
     StateNotifierProvider<BrowseFilterNotifier, BrowseFilter>(
-  (ref) => BrowseFilterNotifier(),
-);
+      (ref) => BrowseFilterNotifier(),
+    );
 
 /// Hasil jelajah sesuai filter aktif.
-final browseResultsProvider =
-    FutureProvider.autoDispose<List<Manga>>((ref) async {
+final browseResultsProvider = FutureProvider.autoDispose<List<Manga>>((
+  ref,
+) async {
   final filter = ref.watch(browseFilterProvider);
   final language = ref.watch(chapterLanguageProvider);
+  final adult = ref.watch(showAdultContentProvider);
 
   final order = switch (filter.order) {
     BrowseOrder.popular => 'followedCount',
@@ -211,16 +241,19 @@ final browseResultsProvider =
     BrowseOrder.rating => 'rating',
   };
 
-  final list = await ref.watch(mangaDexApiProvider).browse(
+  final list = await ref
+      .watch(mangaDexApiProvider)
+      .browse(
         language: language,
         tagIds: filter.tagIds.toList(),
         status: filter.status,
         year: filter.year,
         order: order,
         limit: 24,
+        adult: adult,
       );
 
   return ref
       .watch(chapterAvailabilityProvider)
-      .filterAvailable(list, (manga) => manga.id, language);
+      .filterAvailable(list, (manga) => manga.id, language, adult: adult);
 });

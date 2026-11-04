@@ -20,10 +20,16 @@ class ChapterAvailability {
   /// Umur cache. Ketersediaan chapter jarang berubah, 6 jam cukup.
   static const Duration ttl = Duration(hours: 6);
 
-  String _key(String mangaId, String language) => 'avail.$language.$mangaId';
+  /// Cache dipisah per mode konten: mengaktifkan 18+ bisa mengubah hasil.
+  String _key(String mangaId, String language, bool adult) =>
+      'avail.$language.${adult ? 'adult' : 'std'}.$mangaId';
 
-  Future<int?> count(String mangaId, String language) async {
-    final String raw = _storage.getString(_key(mangaId, language));
+  Future<int?> count(
+    String mangaId,
+    String language, {
+    bool adult = false,
+  }) async {
+    final String raw = _storage.getString(_key(mangaId, language, adult));
     if (raw.isNotEmpty) {
       final int sep = raw.indexOf('|');
       if (sep > 0) {
@@ -37,9 +43,13 @@ class ChapterAvailability {
     }
 
     try {
-      final int value = await _api.chapterCount(mangaId, language: language);
+      final int value = await _api.chapterCount(
+        mangaId,
+        language: language,
+        adult: adult,
+      );
       await _storage.setString(
-        _key(mangaId, language),
+        _key(mangaId, language, adult),
         '${DateTime.now().millisecondsSinceEpoch}|$value',
       );
       return value;
@@ -54,15 +64,16 @@ class ChapterAvailability {
   Future<List<T>> filterAvailable<T>(
     List<T> items,
     String Function(T item) idOf,
-    String language,
-  ) async {
+    String language, {
+    bool adult = false,
+  }) async {
     if (items.isEmpty) return items;
 
     final List<MapEntry<T, int?>> checked = await Future.wait(
       items.map(
         (T item) async => MapEntry<T, int?>(
           item,
-          await count(idOf(item), language),
+          await count(idOf(item), language, adult: adult),
         ),
       ),
     );
@@ -74,7 +85,11 @@ class ChapterAvailability {
   }
 
   /// Buang cache satu judul (mis. setelah pengguna membuka detail).
-  Future<void> invalidate(String mangaId, String language) {
-    return _storage.remove(_key(mangaId, language));
+  Future<void> invalidate(
+    String mangaId,
+    String language, {
+    bool adult = false,
+  }) {
+    return _storage.remove(_key(mangaId, language, adult));
   }
 }

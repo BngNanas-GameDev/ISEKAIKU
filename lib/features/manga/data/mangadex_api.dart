@@ -15,8 +15,8 @@ class MangaDexApi {
   final ApiClient _probe;
 
   MangaDexApi([ApiClient? client, ApiClient? probe])
-      : _client = client ?? mangaDexClient,
-        _probe = probe ?? mangaDexProbeClient;
+    : _client = client ?? mangaDexClient,
+      _probe = probe ?? mangaDexProbeClient;
 
   static const List<String> _includeRelations = <String>[
     'cover_art',
@@ -24,18 +24,30 @@ class MangaDexApi {
     'artist',
   ];
 
+  /// Rating konten yang diminta.
+  ///
+  /// `erotica` dan `pornographic` hanya diikutkan bila pengguna mengaktifkan
+  /// konten 18+ di Pustaka. Tanpa itu, judul dengan rating tersebut tidak
+  /// pernah muncul di hasil pencarian/jelajah.
+  static List<String> contentRatings({required bool adult}) {
+    return adult
+        ? const <String>['safe', 'suggestive', 'erotica', 'pornographic']
+        : const <String>['safe', 'suggestive'];
+  }
+
   /// Manga populer berdasarkan jumlah follower.
   Future<List<Manga>> popular({
     int limit = 20,
     int offset = 0,
     String language = 'id',
+    bool adult = false,
   }) async {
     final json = await _getJson('/manga', <String, dynamic>{
       'limit': limit,
       'offset': offset,
       'includes': _includeRelations,
       'order[followedCount]': 'desc',
-      'contentRating': <String>['safe', 'suggestive'],
+      'contentRating': contentRatings(adult: adult),
       'availableTranslatedLanguage': <String>[language],
     });
     return MangaDexMapper.mangaList(json);
@@ -46,13 +58,14 @@ class MangaDexApi {
     int limit = 20,
     int offset = 0,
     String language = 'id',
+    bool adult = false,
   }) async {
     final json = await _getJson('/manga', <String, dynamic>{
       'limit': limit,
       'offset': offset,
       'includes': _includeRelations,
       'order[latestUploadedChapter]': 'desc',
-      'contentRating': <String>['safe', 'suggestive'],
+      'contentRating': contentRatings(adult: adult),
       'availableTranslatedLanguage': <String>[language],
     });
     return MangaDexMapper.mangaList(json);
@@ -63,6 +76,7 @@ class MangaDexApi {
     String query, {
     int limit = 24,
     int offset = 0,
+    bool adult = false,
   }) async {
     final json = await _getJson('/manga', <String, dynamic>{
       'title': query,
@@ -70,17 +84,16 @@ class MangaDexApi {
       'offset': offset,
       'includes': _includeRelations,
       'order[relevance]': 'desc',
-      'contentRating': <String>['safe', 'suggestive'],
+      'contentRating': contentRatings(adult: adult),
     });
     return MangaDexMapper.mangaList(json);
   }
 
   /// Detail satu manga.
   Future<Manga> byId(String id) async {
-    final json = await _getJson(
-      '/manga/$id',
-      <String, dynamic>{'includes': _includeRelations},
-    );
+    final json = await _getJson('/manga/$id', <String, dynamic>{
+      'includes': _includeRelations,
+    });
     return MangaDexMapper.manga(json['data'] as Map<String, dynamic>);
   }
 
@@ -95,6 +108,7 @@ class MangaDexApi {
     String mangaId, {
     String language = 'id',
     int limit = 500,
+    bool adult = false,
   }) async {
     final json = await _getJson('/manga/$mangaId/feed', <String, dynamic>{
       'limit': limit,
@@ -103,7 +117,7 @@ class MangaDexApi {
       'order[chapter]': 'asc',
       'includeEmptyPages': 0,
       'includeExternalUrl': 0,
-      'contentRating': <String>['safe', 'suggestive'],
+      'contentRating': contentRatings(adult: adult),
     });
 
     final data = (json['data'] as List<dynamic>? ?? <dynamic>[])
@@ -118,13 +132,17 @@ class MangaDexApi {
   ///
   /// Memakai `limit=1` supaya payload kecil; total diambil dari metadata
   /// respons. Dipakai untuk menyaring judul yang tidak punya chapter.
-  Future<int> chapterCount(String mangaId, {required String language}) async {
+  Future<int> chapterCount(
+    String mangaId, {
+    required String language,
+    bool adult = false,
+  }) async {
     final json = await _getProbeJson('/manga/$mangaId/feed', <String, dynamic>{
       'limit': 1,
       'translatedLanguage': <String>[language],
       'includeEmptyPages': 0,
       'includeExternalUrl': 0,
-      'contentRating': <String>['safe', 'suggestive'],
+      'contentRating': contentRatings(adult: adult),
     });
     return (json['total'] as num?)?.toInt() ?? 0;
   }
@@ -166,13 +184,14 @@ class MangaDexApi {
     String order = 'followedCount',
     int limit = 24,
     int offset = 0,
+    bool adult = false,
   }) async {
     final json = await _getJson('/manga', <String, dynamic>{
       'limit': limit,
       'offset': offset,
       'includes': _includeRelations,
       'order[$order]': 'desc',
-      'contentRating': <String>['safe', 'suggestive'],
+      'contentRating': contentRatings(adult: adult),
       'availableTranslatedLanguage': <String>[language],
       if (tagIds.isNotEmpty) 'includedTags': tagIds,
       if (status != null) 'status': <String>[status],
