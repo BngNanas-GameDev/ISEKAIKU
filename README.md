@@ -225,8 +225,12 @@ Skema backend opsional ada di:
   `forum_posts`, `forum_reports`) beserta trigger moderasi.
 - `supabase/migrations/0003_profile_social.sql` — bio profil, forward manga
   pada topik, dan `user_follows` (pengikut/mengikuti).
-- `supabase/migrations/0004_birth_date.sql` — tanggal lahir sekali isi
+- `supabase/migrations/0004_birth_date.sql` - tanggal lahir sekali isi
   (tidak bisa diubah) untuk penyesuaian usia; status 18+ dihitung otomatis.
+- `supabase/migrations/0005_username.sql` - nickname 3–24 karakter, unik
+  tanpa membedakan huruf besar/kecil.
+- `supabase/migrations/0006_report_user.sql` - laporan pengguna untuk
+  kepatuhan UGC Play.
 
 Semuanya lengkap dengan **RLS** dan **trigger moderasi** server-side.
 
@@ -238,9 +242,10 @@ Kebijakan konten 18+: `docs/kebijakan-konten.md` — ambang **18 tahun**,
 hanya rating Erotika, tanggal lahir diisi sekali dan tidak bisa diubah,
 pornografi tidak pernah diminta.
 
-Checklist rilis Play Store: `docs/rilis.md`. Versi publik kebijakan untuk URL
-Play ada di `docs/privacy.md` dan `docs/terms.md` (bisa diaktifkan lewat
-GitHub Pages).
+Checklist rilis Play Store: `docs/rilis.md`. Panduan isi Play Console
+(internal → closed → produksi): `docs/play-console.md`. Versi publik
+kebijakan untuk URL Play ada di `docs/privacy.md` dan `docs/terms.md`
+(bisa diaktifkan lewat GitHub Pages).
 
 Aplikasi tetap **local-first**: tanpa login, semua fitur baca tetap jalan.
 

@@ -92,6 +92,9 @@ class _ProfileView extends ConsumerWidget {
     final AsyncValue<List<ForumThread>> threads = ref.watch(
       myForumThreadsProvider,
     );
+    final AsyncValue<List<UserProfile>> blocked = ref.watch(
+      blockedUsersProvider,
+    );
     final int readCount = ref.watch(readMangaCountProvider);
 
     final UserProfile? data = profile.valueOrNull;
@@ -202,6 +205,28 @@ class _ProfileView extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s),
+          ListTile(
+            leading: const Icon(
+              Icons.block_outlined,
+              color: AppColors.onSurfaceVariant,
+            ),
+            title: Text('Pengguna diblokir', style: AppTypography.bodyMedium),
+            subtitle: Text(
+              blocked.valueOrNull == null
+                  ? 'Memuat…'
+                  : '${blocked.valueOrNull!.length} akun disembunyikan dari forum',
+              style: AppTypography.labelSmall,
+            ),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: AppColors.onSurfaceVariant,
+            ),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (context) => const _BlockedUsersDialog(),
             ),
           ),
           const SizedBox(height: AppSpacing.l),
@@ -578,6 +603,85 @@ class _FollowListDialog extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.bodyMedium,
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Tutup'),
+        ),
+      ],
+    );
+  }
+}
+
+class _BlockedUsersDialog extends ConsumerWidget {
+  const _BlockedUsersDialog();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<UserProfile>> users = ref.watch(blockedUsersProvider);
+
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceContainer,
+      title: const Text('Pengguna diblokir', style: AppTypography.titleMedium),
+      content: SizedBox(
+        width: 360,
+        height: 340,
+        child: users.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Text(
+              'Gagal memuat daftar blokir.',
+              style: AppTypography.bodySmall,
+            ),
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return Center(
+                child: Text(
+                  'Belum ada pengguna yang diblokir.\n'
+                  'Blokir dari menu topik atau balasan di forum.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodySmall,
+                ),
+              );
+            }
+
+            return ListView.separated(
+              itemCount: items.length,
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final UserProfile blocked = items[index];
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: ForumAvatar(name: blocked.displayName, size: 34),
+                  title: Text(
+                    blocked.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyMedium,
+                  ),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      final String? userId = ref.read(currentUserProvider)?.id;
+                      if (userId == null) return;
+
+                      await ref
+                          .read(accountRepositoryProvider)
+                          .unblockUser(userId, blocked.id);
+                      ref.invalidate(blockedUserIdsProvider);
+                      ref.invalidate(blockedUsersProvider);
+                      ref.invalidate(forumThreadsProvider);
+                      ref.invalidate(forumThreadProvider);
+                      ref.invalidate(myForumThreadsProvider);
+                    },
+                    child: const Text('Buka blokir'),
                   ),
                 );
               },

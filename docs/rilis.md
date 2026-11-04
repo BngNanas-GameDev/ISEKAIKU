@@ -6,7 +6,7 @@ Dokumen ini dipakai sebelum mengunggah ke Google Play.
 
 - [ ] Migrasi Supabase sudah dijalankan berurutan:
       `0001_schema.sql`, `0002_forum.sql`, `0003_profile_social.sql`,
-      `0004_birth_date.sql`, `0005_username.sql`.
+      `0004_birth_date.sql`, `0005_username.sql`, `0006_report_user.sql`.
 - [ ] Login Google berfungsi di build rilis (bukan hanya debug).
 - [ ] Deep link `com.isekaiku.isekaiku://auth-callback` terdaftar di
       Supabase Redirect URLs.
@@ -31,8 +31,8 @@ Setelah keystore dibuat:
 ## 3. Build
 
 ```powershell
-.\scripts\build-apk.ps1 -Release          # APK uji
-.\scripts\build-apk.ps1 -Bundle           # AAB untuk Play Store
+.\scripts\build-apk.ps1 -Release            # APK uji (bisa 18+)
+.\scripts\build-apk.ps1 -Bundle -PlaySafe   # AAB untuk Play (tanpa 18+)
 ```
 
 APK rilis berisi semua arsitektur sehingga besar (±100 MB). Unggah **AAB**,

@@ -50,6 +50,10 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     );
     final User? user = ref.watch(currentUserProvider);
     final ForumThread? thread = detail.valueOrNull?.thread;
+    final Set<String> blockedUserIds =
+        ref.watch(blockedUserIdsProvider).valueOrNull ?? const <String>{};
+    final bool authorBlocked =
+        thread != null && blockedUserIds.contains(thread.authorId);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -65,6 +69,12 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                   _report('thread', thread.id);
                 } else if (value == 'delete') {
                   _deleteThread();
+                } else if (value == 'report_user') {
+                  _report('user', thread.authorId);
+                } else if (value == 'block_user') {
+                  _blockAuthor(thread.authorId, popIfThread: true);
+                } else if (value == 'unblock_user') {
+                  _unblockAuthor(thread.authorId);
                 }
               },
               itemBuilder: (context) => <PopupMenuEntry<String>>[
@@ -73,11 +83,29 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                     value: 'report',
                     child: Text('Laporkan topik'),
                   ),
-                if (user?.id == thread.authorId)
+                if (user != null &&
+                    user.id != thread.authorId) ...<PopupMenuEntry<String>>[
+                  const PopupMenuDivider(),
+                  const PopupMenuItem<String>(
+                    value: 'report_user',
+                    child: Text('Laporkan pengguna'),
+                  ),
+                  PopupMenuItem<String>(
+                    value: authorBlocked ? 'unblock_user' : 'block_user',
+                    child: Text(
+                      authorBlocked
+                          ? 'Buka blokir pengguna'
+                          : 'Blokir pengguna',
+                    ),
+                  ),
+                ],
+                if (user?.id == thread.authorId) ...<PopupMenuEntry<String>>[
+                  const PopupMenuDivider(),
                   const PopupMenuItem<String>(
                     value: 'delete',
                     child: Text('Hapus topik'),
                   ),
+                ],
               ],
             ),
         ],
@@ -139,6 +167,12 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                 onDelete: user?.id == post.authorId
                     ? () => _deletePost(post)
                     : null,
+                onReportUser: user == null || user.id == post.authorId
+                    ? null
+                    : () => _report('user', post.authorId),
+                onBlockUser: user == null || user.id == post.authorId
+                    ? null
+                    : () => _blockAuthor(post.authorId),
               ),
         ],
       ),
@@ -298,6 +332,41 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     } catch (_) {
       _snack('Balasan gagal dihapus. Coba lagi.');
     }
+  }
+
+  Future<void> _blockAuthor(String authorId, {bool popIfThread = false}) async {
+    final String? userId = ref.read(currentUserProvider)?.id;
+    if (userId == null || userId == authorId) return;
+
+    try {
+      await ref.read(accountRepositoryProvider).blockUser(userId, authorId);
+      _invalidateBlocks();
+      _snack('Pengguna diblokir. Kontennya disembunyikan.');
+      if (popIfThread && mounted) context.pop();
+    } catch (_) {
+      _snack('Tidak bisa memblokir pengguna. Coba lagi.');
+    }
+  }
+
+  Future<void> _unblockAuthor(String authorId) async {
+    final String? userId = ref.read(currentUserProvider)?.id;
+    if (userId == null) return;
+
+    try {
+      await ref.read(accountRepositoryProvider).unblockUser(userId, authorId);
+      _invalidateBlocks();
+      _snack('Blokir dibuka.');
+    } catch (_) {
+      _snack('Tidak bisa membuka blokir. Coba lagi.');
+    }
+  }
+
+  void _invalidateBlocks() {
+    ref.invalidate(blockedUserIdsProvider);
+    ref.invalidate(blockedUsersProvider);
+    ref.invalidate(forumThreadsProvider);
+    ref.invalidate(forumThreadProvider);
+    ref.invalidate(myForumThreadsProvider);
   }
 
   Future<void> _report(String targetType, String targetId) async {
@@ -471,12 +540,16 @@ class _PostTile extends StatelessWidget {
     required this.canDelete,
     this.onReport,
     this.onDelete,
+    this.onReportUser,
+    this.onBlockUser,
   });
 
   final ForumPost post;
   final bool canDelete;
   final VoidCallback? onReport;
   final VoidCallback? onDelete;
+  final VoidCallback? onReportUser;
+  final VoidCallback? onBlockUser;
 
   @override
   Widget build(BuildContext context) {
@@ -517,7 +590,10 @@ class _PostTile extends StatelessWidget {
               ],
             ),
           ),
-          if (onReport != null || onDelete != null)
+          if (onReport != null ||
+              onDelete != null ||
+              onReportUser != null ||
+              onBlockUser != null)
             SizedBox(
               width: 32,
               height: 32,
@@ -530,13 +606,27 @@ class _PostTile extends StatelessWidget {
                     onReport?.call();
                   } else if (value == 'delete') {
                     onDelete?.call();
+                  } else if (value == 'report_user') {
+                    onReportUser?.call();
+                  } else if (value == 'block_user') {
+                    onBlockUser?.call();
                   }
                 },
                 itemBuilder: (context) => <PopupMenuEntry<String>>[
                   if (onReport != null)
                     const PopupMenuItem<String>(
                       value: 'report',
-                      child: Text('Laporkan'),
+                      child: Text('Laporkan balasan'),
+                    ),
+                  if (onReportUser != null)
+                    const PopupMenuItem<String>(
+                      value: 'report_user',
+                      child: Text('Laporkan pengguna'),
+                    ),
+                  if (onBlockUser != null)
+                    const PopupMenuItem<String>(
+                      value: 'block_user',
+                      child: Text('Blokir pengguna'),
                     ),
                   if (canDelete && onDelete != null)
                     const PopupMenuItem<String>(

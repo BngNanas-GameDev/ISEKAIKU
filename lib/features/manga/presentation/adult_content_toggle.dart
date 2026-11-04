@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_providers.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../account/account_providers.dart';
@@ -16,6 +17,11 @@ import '../manga_providers.dart';
 /// 2. tanggal lahir (sekali isi) harus 18+,
 /// 3. konfirmasi terakhir sebelum diaktifkan.
 Future<void> toggleAdultContent(BuildContext context, WidgetRef ref) async {
+  if (AppConfig.playSafe) {
+    _snack(context, 'Konten 18+ tidak tersedia di versi Play Store.');
+    return;
+  }
+
   final bool active = ref.read(showAdultContentProvider);
 
   if (active) {

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/auth/auth_providers.dart';
+import '../account/account_providers.dart';
 import 'data/forum_repository.dart';
 import 'data/models/forum_models.dart';
 
@@ -21,16 +22,20 @@ final forumThreadsProvider = FutureProvider.autoDispose<List<ForumThread>>((
 ) async {
   final category = ref.watch(forumCategoryFilterProvider);
   final sort = ref.watch(forumSortProvider);
+  final blocked = await ref.watch(blockedUserIdsProvider.future);
 
   return ref
       .watch(forumRepositoryProvider)
-      .threads(category: category, sort: sort);
+      .threads(category: category, sort: sort, blockedUserIds: blocked);
 });
 
 /// Satu topik beserta balasannya.
 final forumThreadProvider = FutureProvider.autoDispose
-    .family<ForumThreadDetail?, String>((ref, threadId) {
-      return ref.watch(forumRepositoryProvider).thread(threadId);
+    .family<ForumThreadDetail?, String>((ref, threadId) async {
+      final blocked = await ref.watch(blockedUserIdsProvider.future);
+      return ref
+          .watch(forumRepositoryProvider)
+          .thread(threadId, blockedUserIds: blocked);
     });
 
 /// Topik yang ditulis pengguna saat ini (tab Akun).

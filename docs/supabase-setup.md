@@ -23,6 +23,8 @@ dan tanpa internet. Supabase hanya lapisan tambahan.
 3. Salin seluruh isi `supabase/migrations/0002_forum.sql` → **Run**
 4. Salin seluruh isi `supabase/migrations/0003_profile_social.sql` → **Run**
 5. Salin seluruh isi `supabase/migrations/0004_birth_date.sql` → **Run**
+6. Salin seluruh isi `supabase/migrations/0005_username.sql` → **Run**
+7. Salin seluruh isi `supabase/migrations/0006_report_user.sql` → **Run**
 
 Skrip pertama membuat:
 
@@ -65,6 +67,11 @@ trigger yang membuat tanggal lahir:
 - minimal usia 13 tahun dan maksimal 120 tahun.
 
 Status 18+ dihitung dari tanggal lahir, jadi tidak pernah kedaluwarsa.
+
+Skrip kelima (`0005_username.sql`) membuat nickname bisa diubah: validasi
+3–24 karakter dan keunikan tanpa membedakan huruf besar/kecil.
+Skrip keenam (`0006_report_user.sql`) mengizinkan `forum_reports` menerima
+`target_type = 'user'` untuk laporan pengguna (syarat UGC Play).
 
 Halaman **Akun** menampilkan foto profil (dari Google), bio, jumlah manga
 dibaca, pengikut, mengikuti, dan daftar thread yang pernah ditulis.

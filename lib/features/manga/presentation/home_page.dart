@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/images/cover_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -104,11 +105,12 @@ class HomePage extends ConsumerWidget {
                             value: 'terms',
                             child: Text('Syarat Layanan'),
                           ),
-                          CheckedPopupMenuItem<String>(
-                            value: 'adult',
-                            checked: adult,
-                            child: const Text('Konten 18+'),
-                          ),
+                          if (!AppConfig.playSafe)
+                            CheckedPopupMenuItem<String>(
+                              value: 'adult',
+                              checked: adult,
+                              child: const Text('Konten 18+'),
+                            ),
                           const PopupMenuDivider(),
                           const PopupMenuItem<String>(
                             value: 'account',

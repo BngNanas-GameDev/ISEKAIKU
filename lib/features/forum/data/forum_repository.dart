@@ -29,6 +29,7 @@ class ForumRepository {
     ForumSort sort = ForumSort.terbaru,
     int offset = 0,
     int limit = pageSize,
+    Set<String> blockedUserIds = const <String>{},
   }) async {
     var query = _client.from('forum_threads').select();
 
@@ -49,6 +50,9 @@ class ForumRepository {
     );
 
     return list
+        .where(
+          (row) => !blockedUserIds.contains(row['user_id'] as String? ?? ''),
+        )
         .map((row) => ForumThread.tryFromRow(row, authorNames: names))
         .whereType<ForumThread>()
         .toList(growable: false);
@@ -77,7 +81,10 @@ class ForumRepository {
         .toList(growable: false);
   }
 
-  Future<ForumThreadDetail?> thread(String id) async {
+  Future<ForumThreadDetail?> thread(
+    String id, {
+    Set<String> blockedUserIds = const <String>{},
+  }) async {
     final threadRow = await _client
         .from('forum_threads')
         .select()
@@ -103,7 +110,13 @@ class ForumRepository {
     final thread = ForumThread.tryFromRow(threadRow, authorNames: names);
     if (thread == null) return null;
 
+    // Topik dari pengguna yang diblokir tidak ditampilkan.
+    if (blockedUserIds.contains(thread.authorId)) return null;
+
     final posts = rows
+        .where(
+          (row) => !blockedUserIds.contains(row['user_id'] as String? ?? ''),
+        )
         .map((row) => ForumPost.tryFromRow(row, authorNames: names))
         .whereType<ForumPost>()
         .toList(growable: false);

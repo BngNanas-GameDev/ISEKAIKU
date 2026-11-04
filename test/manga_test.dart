@@ -61,5 +61,16 @@ void main() {
       expect(ratings, containsAll(<String>['safe', 'suggestive', 'erotica']));
       expect(ratings, isNot(contains('pornographic')));
     });
+
+    test('mode Play Safe selalu hanya safe & suggestive', () {
+      expect(MangaDexApi.contentRatings(adult: true, playSafe: true), <String>[
+        'safe',
+        'suggestive',
+      ]);
+      expect(MangaDexApi.contentRatings(adult: false, playSafe: true), <String>[
+        'safe',
+        'suggestive',
+      ]);
+    });
   });
 }

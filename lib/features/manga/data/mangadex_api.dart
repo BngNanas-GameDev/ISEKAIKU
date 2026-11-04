@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import 'mangadex_mapper.dart';
@@ -30,7 +31,11 @@ class MangaDexApi {
   /// - Tanpa verifikasi: hanya `safe` + `suggestive`.
   /// - Setelah verifikasi: `erotica` ikut, tetapi `pornographic` **tidak
   ///   pernah** diminta. Konten pornografi tidak disediakan aplikasi.
-  static List<String> contentRatings({required bool adult}) {
+  static List<String> contentRatings({
+    required bool adult,
+    bool playSafe = AppConfig.playSafe,
+  }) {
+    if (playSafe) return const <String>['safe', 'suggestive'];
     return adult
         ? const <String>['safe', 'suggestive', 'erotica']
         : const <String>['safe', 'suggestive'];

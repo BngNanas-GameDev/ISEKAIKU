@@ -52,3 +52,21 @@ final readMangaCountProvider = Provider<int>((ref) {
   }
   return ids.length;
 });
+
+/// Id pengguna yang diblokir akun saat ini (dipakai untuk menyaring forum).
+final blockedUserIdsProvider = FutureProvider.autoDispose<Set<String>>((
+  ref,
+) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const <String>{};
+  return ref.watch(accountRepositoryProvider).blockedUserIds(user.id);
+});
+
+/// Profil pengguna yang diblokir (untuk halaman pengaturan blokir).
+final blockedUsersProvider = FutureProvider.autoDispose<List<UserProfile>>((
+  ref,
+) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const <UserProfile>[];
+  return ref.watch(accountRepositoryProvider).blockedUsers(user.id);
+});

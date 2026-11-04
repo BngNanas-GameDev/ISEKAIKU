@@ -93,6 +93,42 @@ class AccountRepository {
         .eq('following_id', followingId);
   }
 
+  /// Daftar id pengguna yang diblokir (untuk menyaring forum).
+  Future<Set<String>> blockedUserIds(String userId) async {
+    final rows = await _client
+        .from('user_blocks')
+        .select('blocked_user_id')
+        .eq('user_id', userId);
+
+    return (rows as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .map((row) => row['blocked_user_id'])
+        .whereType<String>()
+        .toSet();
+  }
+
+  Future<List<UserProfile>> blockedUsers(String userId) async {
+    final ids = (await blockedUserIds(userId)).toList(growable: false);
+    return _profiles(ids);
+  }
+
+  Future<void> blockUser(String userId, String blockedId) async {
+    if (userId == blockedId) return;
+
+    await _client.from('user_blocks').upsert(<String, dynamic>{
+      'user_id': userId,
+      'blocked_user_id': blockedId,
+    });
+  }
+
+  Future<void> unblockUser(String userId, String blockedId) async {
+    await _client
+        .from('user_blocks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('blocked_user_id', blockedId);
+  }
+
   Future<List<UserProfile>> followers(String userId) async {
     final ids = await _followIds(
       select: 'follower_id',

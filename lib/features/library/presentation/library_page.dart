@@ -92,11 +92,12 @@ class LibraryPage extends ConsumerWidget {
                   child: const Text('Urutkan: Judul A–Z'),
                 ),
                 const PopupMenuDivider(),
-                CheckedPopupMenuItem<String>(
-                  value: 'adult',
-                  checked: adult,
-                  child: const Text('Konten 18+ (Erotika)'),
-                ),
+                if (!AppConfig.playSafe)
+                  CheckedPopupMenuItem<String>(
+                    value: 'adult',
+                    checked: adult,
+                    child: const Text('Konten 18+ (Erotika)'),
+                  ),
                 CheckedPopupMenuItem<String>(
                   value: 'data_saver',
                   checked: dataSaver,

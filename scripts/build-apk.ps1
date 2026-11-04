@@ -5,6 +5,7 @@
 #   .\scripts\build-apk.ps1                 # debug
 #   .\scripts\build-apk.ps1 -Release        # release
 #   .\scripts\build-apk.ps1 -Bundle         # AAB untuk Play Store
+#   .\scripts\build-apk.ps1 -Bundle -PlaySafe # AAB Play tanpa konten 18+
 #   .\scripts\build-apk.ps1 -Install        # debug + pasang ke HP
 #   .\scripts\build-apk.ps1 -Release -Install -Device 192.168.1.3:36275
 #
@@ -13,6 +14,7 @@
 param(
   [switch]$Release,
   [switch]$Bundle,
+  [switch]$PlaySafe,
   [switch]$Install,
   [string]$Device = ""
 )
@@ -66,6 +68,11 @@ foreach ($key in $mapping.Keys) {
 }
 
 Write-Host ("Konfigurasi dari .env: " + ($found -join ", ")) -ForegroundColor DarkGray
+
+if ($PlaySafe) {
+  $defines += "--dart-define=PLAY_SAFE=true"
+  Write-Host "Mode Play Safe: konten 18+ dinonaktifkan." -ForegroundColor Cyan
+}
 
 $mode = if ($Release -or $Bundle) { "--release" } else { "--debug" }
 $apkName = if ($Release -or $Bundle) { "app-release.apk" } else { "app-debug.apk" }

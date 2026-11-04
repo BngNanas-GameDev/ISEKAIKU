@@ -22,6 +22,10 @@ class AppConfig {
   /// Google OAuth client ID (untuk login Google).
   static const String googleClientId = String.fromEnvironment('ISEKAIKU_CID');
 
+  /// Build khusus Google Play: menyembunyikan/menonaktifkan konten Erotika
+  /// agar patuh kebijakan Play. Build APK langsung tetap bisa 18+.
+  static const bool playSafe = bool.fromEnvironment('PLAY_SAFE');
+
   static bool get hasSupabase =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 

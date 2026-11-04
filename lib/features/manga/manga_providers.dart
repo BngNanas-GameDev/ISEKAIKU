@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/storage/storage_providers.dart';
 import '../../core/storage/storage_service.dart';
 import '../account/account_providers.dart';
@@ -97,6 +98,7 @@ final showAdultContentProvider =
 /// Status tidak punya masa berlaku: selama tanggal lahir memenuhi syarat,
 /// akses tetap berlaku tanpa isi ulang.
 Future<bool> _adultEnabled(Ref ref) async {
+  if (AppConfig.playSafe) return false;
   if (!ref.watch(showAdultContentProvider)) return false;
 
   final profile = await ref.watch(currentProfileProvider.future);
