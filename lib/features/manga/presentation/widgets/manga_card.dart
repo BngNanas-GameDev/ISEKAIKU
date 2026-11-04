@@ -1,21 +1,27 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/manga.dart';
+import '../../../../core/images/cover_image.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../manga_providers.dart';
 
 /// Kartu manga 2:3 dengan overlay judul.
-class MangaCard extends StatelessWidget {
+class MangaCard extends ConsumerWidget {
   final Manga manga;
 
   const MangaCard({super.key, required this.manga});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool dataSaver = ref.watch(dataSaverProvider);
+    final String? cover = coverUrlFor(manga.coverUrl, dataSaver: dataSaver);
+
     return GestureDetector(
       onTap: () => context.push('/manga/${manga.id}'),
       child: ClipRRect(
@@ -25,9 +31,9 @@ class MangaCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (manga.coverUrl != null)
+              if (cover != null)
                 CachedNetworkImage(
-                  imageUrl: manga.coverUrl!,
+                  imageUrl: cover,
                   fit: BoxFit.cover,
                   fadeInDuration: const Duration(milliseconds: 200),
                   placeholder: (context, url) =>

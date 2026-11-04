@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/images/cover_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/iseakaiku_wordmark.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../account/presentation/account_dialog.dart';
 import '../../legal/presentation/about_dialog.dart';
 import '../../library/data/models/library_models.dart';
@@ -145,7 +147,9 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
                 ],
-                _ => <Widget>[const _LoadingSliver()],
+                _ => <Widget>[
+                  const SliverToBoxAdapter(child: PopularCarouselSkeleton()),
+                ],
               },
 
               // ---------------- Donate ----------------
@@ -170,7 +174,7 @@ class HomePage extends ConsumerWidget {
                     child: _EmptyNote(text: 'Gagal memuat update terbaru.'),
                   ),
                 ],
-                _ => <Widget>[const _LoadingSliver()],
+                _ => <Widget>[const MangaGridSkeleton()],
               },
             ],
           ),
@@ -209,29 +213,6 @@ class _SectionHeader extends StatelessWidget {
             const SizedBox(width: AppSpacing.s),
             Text(title, style: AppTypography.titleLarge),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadingSliver extends StatelessWidget {
-  const _LoadingSliver();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SliverToBoxAdapter(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
-        child: Center(
-          child: SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: AppColors.primary,
-            ),
-          ),
         ),
       ),
     );
@@ -352,13 +333,17 @@ class _ContinueReadingCard extends ConsumerWidget {
   }
 }
 
-class _ContinueCover extends StatelessWidget {
+class _ContinueCover extends ConsumerWidget {
   const _ContinueCover({required this.url});
 
   final String? url;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final String? cover = coverUrlFor(
+      url,
+      dataSaver: ref.watch(dataSaverProvider),
+    );
     const fallback = ColoredBox(
       color: AppColors.surfaceContainerHigh,
       child: Icon(
@@ -373,10 +358,10 @@ class _ContinueCover extends StatelessWidget {
       child: SizedBox(
         width: 52,
         height: 70,
-        child: url == null
+        child: cover == null
             ? fallback
             : CachedNetworkImage(
-                imageUrl: url!,
+                imageUrl: cover,
                 fit: BoxFit.cover,
                 placeholder: (context, url) =>
                     const ColoredBox(color: AppColors.surfaceContainerHigh),
@@ -461,16 +446,20 @@ class _PopularCarouselState extends State<_PopularCarousel> {
   }
 }
 
-class _PopularCard extends StatelessWidget {
+class _PopularCard extends ConsumerWidget {
   const _PopularCard({required this.manga});
 
   final Manga manga;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool adult =
         manga.contentRating == 'erotica' ||
         manga.contentRating == 'pornographic';
+    final String? cover = coverUrlFor(
+      manga.coverUrl,
+      dataSaver: ref.watch(dataSaverProvider),
+    );
 
     return InkWell(
       borderRadius: BorderRadius.circular(AppRadius.l),
@@ -480,9 +469,9 @@ class _PopularCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            if (manga.coverUrl != null)
+            if (cover != null)
               CachedNetworkImage(
-                imageUrl: manga.coverUrl!,
+                imageUrl: cover,
                 fit: BoxFit.cover,
                 placeholder: (context, url) =>
                     const ColoredBox(color: AppColors.surfaceContainerHigh),

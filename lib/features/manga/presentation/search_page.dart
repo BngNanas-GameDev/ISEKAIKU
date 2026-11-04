@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../data/search_history.dart';
 import '../manga_providers.dart';
 import 'widgets/manga_card.dart';
@@ -130,15 +131,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           onRetry: () =>
                               ref.invalidate(searchResultsProvider(_query)),
                         ),
-                      _ => const Center(
-                          child: SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppColors.primary,
+                      _ => const CustomScrollView(
+                          slivers: <Widget>[
+                            MangaGridSkeleton(),
+                            SliverToBoxAdapter(
+                              child: SizedBox(height: AppSpacing.xxl),
                             ),
-                          ),
+                          ],
                         ),
                     },
             ),

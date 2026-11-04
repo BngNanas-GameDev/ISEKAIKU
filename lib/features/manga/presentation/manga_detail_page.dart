@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/images/cover_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../library/data/models/library_models.dart';
 import '../../library/library_providers.dart';
 import '../data/chapter_range.dart';
@@ -32,9 +34,7 @@ class MangaDetailPage extends ConsumerWidget {
               onRetry: () => ref.invalidate(mangaDetailProvider(mangaId)),
             ),
           ),
-        _ => const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
+        _ => const SafeArea(child: MangaDetailSkeleton()),
       },
     );
   }
@@ -57,6 +57,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     final manga = widget.manga;
     final chapters = ref.watch(chapterListProvider(manga.id));
     final language = ref.watch(chapterLanguageProvider);
+    final String? cover = coverUrlFor(
+      manga.coverUrl,
+      dataSaver: ref.watch(dataSaverProvider),
+    );
 
     final availability = switch (chapters) {
       AsyncData(:final value) => ChapterRange.from(value, manga.status),
@@ -80,9 +84,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
             background: Stack(
               fit: StackFit.expand,
               children: <Widget>[
-                if (manga.coverUrl != null)
+                if (cover != null)
                   CachedNetworkImage(
-                    imageUrl: manga.coverUrl!,
+                    imageUrl: cover,
                     fit: BoxFit.cover,
                     placeholder: (context, url) =>
                         const ColoredBox(color: AppColors.surfaceContainer),

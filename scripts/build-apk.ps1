@@ -4,6 +4,7 @@
 # Pemakaian:
 #   .\scripts\build-apk.ps1                 # debug
 #   .\scripts\build-apk.ps1 -Release        # release
+#   .\scripts\build-apk.ps1 -Bundle         # AAB untuk Play Store
 #   .\scripts\build-apk.ps1 -Install        # debug + pasang ke HP
 #   .\scripts\build-apk.ps1 -Release -Install -Device 192.168.1.3:36275
 #
@@ -11,6 +12,7 @@
 
 param(
   [switch]$Release,
+  [switch]$Bundle,
   [switch]$Install,
   [string]$Device = ""
 )
@@ -65,20 +67,30 @@ foreach ($key in $mapping.Keys) {
 
 Write-Host ("Konfigurasi dari .env: " + ($found -join ", ")) -ForegroundColor DarkGray
 
-$mode = if ($Release) { "--release" } else { "--debug" }
-$apkName = if ($Release) { "app-release.apk" } else { "app-debug.apk" }
+$mode = if ($Release -or $Bundle) { "--release" } else { "--debug" }
+$apkName = if ($Release -or $Bundle) { "app-release.apk" } else { "app-debug.apk" }
 $apkPath = Join-Path $root "build\app\outputs\flutter-apk\$apkName"
+$aabPath = Join-Path $root "build\app\outputs\bundle\release\app-release.aab"
 
 $flutter = Join-Path $env:FLUTTER_ROOT "bin\flutter.bat"
 
 Push-Location $root
 try {
-  & $flutter build apk $mode @defines
+  if ($Bundle) {
+    & $flutter build appbundle --release @defines
+  } else {
+    & $flutter build apk $mode @defines
+  }
   if ($LASTEXITCODE -ne 0) {
     throw "Build gagal (exit $LASTEXITCODE)."
   }
 } finally {
   Pop-Location
+}
+
+if ($Bundle) {
+  Write-Host "AAB: $aabPath" -ForegroundColor Green
+  return
 }
 
 Write-Host "APK: $apkPath" -ForegroundColor Green

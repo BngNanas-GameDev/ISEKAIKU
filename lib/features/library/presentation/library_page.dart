@@ -30,6 +30,7 @@ class LibraryPage extends ConsumerWidget {
         AppConfig.hasSupabase && ref.watch(currentUserProvider) != null;
     final sort = ref.watch(librarySortProvider);
     final bool adult = ref.watch(showAdultContentProvider);
+    final bool dataSaver = ref.watch(dataSaverProvider);
 
     final sortedFollowed = List<FollowedManga>.of(followed);
     if (sort == LibrarySort.titleAz) {
@@ -73,6 +74,8 @@ class LibraryPage extends ConsumerWidget {
                       .set(LibrarySort.titleAz);
                 } else if (value == 'adult') {
                   await _toggleAdult(context, ref);
+                } else if (value == 'data_saver') {
+                  ref.read(dataSaverProvider.notifier).set(!dataSaver);
                 } else if (value == 'donate') {
                   context.push('/donate');
                 }
@@ -93,6 +96,11 @@ class LibraryPage extends ConsumerWidget {
                   value: 'adult',
                   checked: adult,
                   child: const Text('Konten 18+ (Erotika)'),
+                ),
+                CheckedPopupMenuItem<String>(
+                  value: 'data_saver',
+                  checked: dataSaver,
+                  child: const Text('Hemat data'),
                 ),
                 const PopupMenuDivider(),
                 const PopupMenuItem<String>(

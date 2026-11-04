@@ -197,8 +197,11 @@ Manga-first sampai rilis. Anime ditunda sampai aplikasi terbukti dipakai.
       menyimpan tanggal lahir), hanya rating Erotika — pornografi tidak
       pernah diminta. Pencarian tidak lagi menyembunyikan judul yang belum
       punya chapter di bahasa aktif. Lihat `docs/kebijakan-konten.md`.
-- [ ] M5 Rilis: skeleton/empty state, hemat data, lokalisasi, ikon adaptif,
-      splash, release signing, QA
+- [x] M5a Rilis (UI): skeleton/empty state, hemat data (sampul 256 + reader
+      data-saver), ikon adaptif, splash, lokalisasi Indonesia
+- [ ] M5b Rilis (distribusi): keystore rilis, SHA-1 OAuth release, AAB,
+      Play Console (18+, IARC, data safety), QA akhir
+      — lihat `docs/rilis.md`
 - [x] M6 Akun Supabase + sinkronisasi Pustaka (Google OAuth, tombstone)
 - [x] M7 Forum komunitas in-app: topik + balasan + kategori, lapor, moderasi
       server (`0002_forum.sql`), forward manga di Rekomendasi, dan tab Akun
@@ -232,8 +235,12 @@ forum, dan keep-alive free tier lewat cron-job.org):
 `docs/supabase-setup.md`.
 
 Kebijakan konten 18+: `docs/kebijakan-konten.md` — ambang **18 tahun**,
-hanya rating Erotika, verifikasi tanggal lahir berlaku 30 hari, dan
+hanya rating Erotika, tanggal lahir diisi sekali dan tidak bisa diubah,
 pornografi tidak pernah diminta.
+
+Checklist rilis Play Store: `docs/rilis.md`. Versi publik kebijakan untuk URL
+Play ada di `docs/privacy.md` dan `docs/terms.md` (bisa diaktifkan lewat
+GitHub Pages).
 
 Aplikasi tetap **local-first**: tanpa login, semua fitur baca tetap jalan.
 
