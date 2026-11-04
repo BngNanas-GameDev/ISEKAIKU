@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,9 +8,11 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../manga/data/models/manga.dart';
 import '../data/forum_validation.dart';
 import '../data/models/forum_models.dart';
 import '../forum_providers.dart';
+import 'forum_manga_picker.dart';
 import 'widgets/forum_widgets.dart';
 
 /// Formulir topik baru.
@@ -25,6 +28,7 @@ class _ForumComposePageState extends ConsumerState<ForumComposePage> {
   final TextEditingController _body = TextEditingController();
 
   ForumCategory _category = ForumCategory.umum;
+  Manga? _manga;
   String? _titleError;
   String? _bodyError;
   String? _error;
@@ -63,9 +67,17 @@ class _ForumComposePageState extends ConsumerState<ForumComposePage> {
             category: _category,
             title: _title.text,
             body: _body.text,
+            mangaId: _category == ForumCategory.rekomendasi ? _manga?.id : null,
+            mangaTitle: _category == ForumCategory.rekomendasi
+                ? _manga?.title
+                : null,
+            mangaCoverUrl: _category == ForumCategory.rekomendasi
+                ? _manga?.coverUrl
+                : null,
           );
 
       ref.invalidate(forumThreadsProvider);
+      ref.invalidate(myForumThreadsProvider);
       if (!mounted) return;
       context.pushReplacement('/forum/$threadId');
     } on PostgrestException catch (error) {
@@ -78,6 +90,13 @@ class _ForumComposePageState extends ConsumerState<ForumComposePage> {
       }
     } finally {
       if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _pickManga() async {
+    final Manga? picked = await showMangaPicker(context);
+    if (picked != null && mounted) {
+      setState(() => _manga = picked);
     }
   }
 
@@ -117,6 +136,26 @@ class _ForumComposePageState extends ConsumerState<ForumComposePage> {
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
+          if (_category == ForumCategory.rekomendasi) ...<Widget>[
+            Text(
+              'Manga yang direkomendasikan',
+              style: AppTypography.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.s),
+            if (_manga == null)
+              OutlinedButton.icon(
+                onPressed: _pickManga,
+                icon: const Icon(Icons.add_link, size: 18),
+                label: const Text('Pilih manga'),
+              )
+            else
+              _MangaAttachment(
+                manga: _manga!,
+                onRemove: () => setState(() => _manga = null),
+                onReplace: _pickManga,
+              ),
+            const SizedBox(height: AppSpacing.l),
+          ],
           TextField(
             controller: _title,
             maxLength: ForumValidation.titleMaxLength,
@@ -168,6 +207,82 @@ class _ForumComposePageState extends ConsumerState<ForumComposePage> {
             label: Text(_sending ? 'Mengirim…' : 'Kirim topik'),
           ),
           const SizedBox(height: AppSpacing.l),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pratinjau manga yang akan dilampirkan ke topik.
+class _MangaAttachment extends StatelessWidget {
+  const _MangaAttachment({
+    required this.manga,
+    required this.onRemove,
+    required this.onReplace,
+  });
+
+  final Manga manga;
+  final VoidCallback onRemove;
+  final VoidCallback onReplace;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.m),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Row(
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.s),
+            child: SizedBox(
+              width: 44,
+              height: 60,
+              child: manga.coverUrl == null
+                  ? const ColoredBox(color: AppColors.surfaceContainerHigh)
+                  : CachedNetworkImage(
+                      imageUrl: manga.coverUrl!,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) => const ColoredBox(
+                        color: AppColors.surfaceContainerHigh,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.m),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  manga.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodyMedium,
+                ),
+                if (manga.author.isNotEmpty)
+                  Text(
+                    manga.author,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelSmall,
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Ganti manga',
+            icon: const Icon(Icons.swap_horiz, size: 20),
+            onPressed: onReplace,
+          ),
+          IconButton(
+            tooltip: 'Hapus lampiran',
+            icon: const Icon(Icons.close, size: 20),
+            onPressed: onRemove,
+          ),
         ],
       ),
     );

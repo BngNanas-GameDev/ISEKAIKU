@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../account/account_providers.dart';
 import '../../account/presentation/account_dialog.dart';
 import '../data/forum_format.dart';
 import '../data/forum_validation.dart';
@@ -448,10 +450,15 @@ class _ThreadHeader extends StatelessWidget {
                   size: 16,
                   color: AppColors.onSurfaceVariant,
                 ),
+              _AuthorFollowButton(authorId: thread.authorId),
             ],
           ),
           const SizedBox(height: AppSpacing.l),
           SelectableText(thread.body, style: AppTypography.bodyMedium),
+          if (thread.hasManga) ...<Widget>[
+            const SizedBox(height: AppSpacing.l),
+            _RecommendationCard(thread: thread),
+          ],
         ],
       ),
     );
@@ -616,6 +623,149 @@ class _ThreadMissing extends StatelessWidget {
           'Topik ini sudah dihapus atau disembunyikan moderator.',
           textAlign: TextAlign.center,
           style: AppTypography.bodySmall,
+        ),
+      ),
+    );
+  }
+}
+
+/// Tombol ikuti penulis topik.
+class _AuthorFollowButton extends ConsumerWidget {
+  const _AuthorFollowButton({required this.authorId});
+
+  final String authorId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    if (user == null || user.id == authorId) {
+      return const SizedBox.shrink();
+    }
+
+    final following = ref.watch(isFollowingUserProvider(authorId));
+    return following.when(
+      loading: () => const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      error: (error, stack) => const SizedBox.shrink(),
+      data: (isFollowing) => TextButton(
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s),
+          minimumSize: const Size(0, 32),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        onPressed: () async {
+          final repo = ref.read(accountRepositoryProvider);
+          try {
+            if (isFollowing) {
+              await repo.unfollow(user.id, authorId);
+            } else {
+              await repo.follow(user.id, authorId);
+            }
+            ref.invalidate(isFollowingUserProvider(authorId));
+            ref.invalidate(profileStatsProvider(authorId));
+            ref.invalidate(profileStatsProvider(user.id));
+            ref.invalidate(followersProvider(authorId));
+            ref.invalidate(followingProvider(user.id));
+          } catch (_) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                const SnackBar(
+                  content: Text('Tidak bisa mengubah status ikuti.'),
+                ),
+              );
+          }
+        },
+        child: Text(isFollowing ? 'Mengikuti' : 'Ikuti'),
+      ),
+    );
+  }
+}
+
+/// Kartu manga yang direkomendasikan pada topik.
+class _RecommendationCard extends StatelessWidget {
+  const _RecommendationCard({required this.thread});
+
+  final ForumThread thread;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.m),
+      onTap: () => context.push('/manga/${thread.mangaId}'),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.s),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(AppRadius.m),
+          border: Border.all(color: AppColors.outlineVariant),
+        ),
+        child: Row(
+          children: <Widget>[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.s),
+              child: SizedBox(
+                width: 52,
+                height: 72,
+                child: thread.mangaCoverUrl == null
+                    ? const ColoredBox(
+                        color: AppColors.surfaceContainerHigh,
+                        child: Icon(
+                          Icons.menu_book_outlined,
+                          size: 20,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: thread.mangaCoverUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const ColoredBox(
+                          color: AppColors.surfaceContainerHigh,
+                        ),
+                        errorWidget: (context, url, error) => const ColoredBox(
+                          color: AppColors.surfaceContainerHigh,
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            size: 18,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.m),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'REKOMENDASI MANGA',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.primary,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    thread.mangaTitle ?? 'Buka manga',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Ketuk untuk langsung membuka',
+                    style: AppTypography.labelSmall,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
+          ],
         ),
       ),
     );

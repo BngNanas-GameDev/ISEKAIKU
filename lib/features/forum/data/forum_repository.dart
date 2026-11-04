@@ -54,6 +54,29 @@ class ForumRepository {
         .toList(growable: false);
   }
 
+  /// Topik yang ditulis satu pengguna (untuk tab Akun).
+  Future<List<ForumThread>> threadsByAuthor(
+    String userId, {
+    int limit = 30,
+  }) async {
+    final rows = await _client
+        .from('forum_threads')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .limit(limit);
+
+    final list = (rows as List<dynamic>).cast<Map<String, dynamic>>().toList(
+      growable: false,
+    );
+    final names = await _authorNames(<String>[userId]);
+
+    return list
+        .map((row) => ForumThread.tryFromRow(row, authorNames: names))
+        .whereType<ForumThread>()
+        .toList(growable: false);
+  }
+
   Future<ForumThreadDetail?> thread(String id) async {
     final threadRow = await _client
         .from('forum_threads')
@@ -89,20 +112,34 @@ class ForumRepository {
   }
 
   /// Membuat topik baru, mengembalikan id-nya.
+  ///
+  /// [mangaId]/[mangaTitle]/[mangaCoverUrl] diisi untuk kategori
+  /// "rekomendasi" agar pembaca bisa langsung membuka manganya.
   Future<String> createThread({
     required String userId,
     required ForumCategory category,
     required String title,
     required String body,
+    String? mangaId,
+    String? mangaTitle,
+    String? mangaCoverUrl,
   }) async {
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'user_id': userId,
+      'category': category.id,
+      'title': title.trim(),
+      'body': body.trim(),
+    };
+
+    if (mangaId != null && mangaId.isNotEmpty) {
+      payload['manga_id'] = mangaId;
+      payload['manga_title'] = mangaTitle;
+      payload['manga_cover_url'] = mangaCoverUrl;
+    }
+
     final row = await _client
         .from('forum_threads')
-        .insert(<String, dynamic>{
-          'user_id': userId,
-          'category': category.id,
-          'title': title.trim(),
-          'body': body.trim(),
-        })
+        .insert(payload)
         .select('id')
         .single();
     return row['id'] as String;

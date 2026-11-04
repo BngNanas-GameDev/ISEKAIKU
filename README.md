@@ -200,7 +200,8 @@ Manga-first sampai rilis. Anime ditunda sampai aplikasi terbukti dipakai.
       splash, release signing, QA
 - [x] M6 Akun Supabase + sinkronisasi Pustaka (Google OAuth, tombstone)
 - [x] M7 Forum komunitas in-app: topik + balasan + kategori, lapor, moderasi
-      server (`supabase/migrations/0002_forum.sql`)
+      server (`0002_forum.sql`), forward manga di Rekomendasi, dan tab Akun
+      (profil, bio, pengikut/mengikuti, aktivitas) lewat `0003_profile_social.sql`
 - [ ] M7b Komentar per manga (memakai tabel `comments` yang sudah ada)
 - [ ] M8 (ditunda) Anime: koleksi lokal, provider video, player media_kit
 
@@ -218,6 +219,8 @@ Skema backend opsional ada di:
   chapter terbaca, komentar per manga, laporan, dan blokir.
 - `supabase/migrations/0002_forum.sql` — forum komunitas (`forum_threads`,
   `forum_posts`, `forum_reports`) beserta trigger moderasi.
+- `supabase/migrations/0003_profile_social.sql` — bio profil, forward manga
+  pada topik, dan `user_follows` (pengikut/mengikuti).
 
 Semuanya lengkap dengan **RLS** dan **trigger moderasi** server-side.
 

@@ -32,3 +32,12 @@ final forumThreadProvider = FutureProvider.autoDispose
     .family<ForumThreadDetail?, String>((ref, threadId) {
       return ref.watch(forumRepositoryProvider).thread(threadId);
     });
+
+/// Topik yang ditulis pengguna saat ini (tab Akun).
+final myForumThreadsProvider = FutureProvider.autoDispose<List<ForumThread>>((
+  ref,
+) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const <ForumThread>[];
+  return ref.watch(forumRepositoryProvider).threadsByAuthor(user.id);
+});

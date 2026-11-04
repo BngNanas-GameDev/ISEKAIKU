@@ -21,6 +21,7 @@ dan tanpa internet. Supabase hanya lapisan tambahan.
 1. Buka **SQL Editor** di dashboard
 2. Salin seluruh isi `supabase/migrations/0001_schema.sql` → **Run**
 3. Salin seluruh isi `supabase/migrations/0002_forum.sql` → **Run**
+4. Salin seluruh isi `supabase/migrations/0003_profile_social.sql` → **Run**
 
 Skrip pertama membuat:
 
@@ -45,6 +46,18 @@ Skrip kedua (`0002_forum.sql`) membuat forum:
 Forum bisa **dibaca tanpa login**; menulis, melapor, dan menghapus milik
 sendiri wajib login Google. Kategori: `umum`, `rekomendasi`, `bantuan`,
 `offtopic`.
+
+Skrip ketiga (`0003_profile_social.sql`) menambah fitur profil:
+
+| Perubahan | Isi |
+|---|---|
+| `profiles.bio` | bio publik (maks. 160 karakter) |
+| `profiles.avatar_url` | foto profil (opsional) |
+| `forum_threads.manga_*` | manga yang dilampirkan pada topik Rekomendasi |
+| `user_follows` | pengikut / mengikuti antar pengguna |
+
+Halaman **Akun** menampilkan foto profil (dari Google), bio, jumlah manga
+dibaca, pengikut, mengikuti, dan daftar thread yang pernah ditulis.
 
 Skema juga memasang **trigger moderasi** di `comments`, `forum_threads`, dan
 `forum_posts` yang menolak:

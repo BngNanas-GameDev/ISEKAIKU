@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/iseakaiku_wordmark.dart';
+import '../../features/account/presentation/account_page.dart';
 import '../../features/donate/presentation/donate_page.dart';
 import '../../features/forum/presentation/forum_compose_page.dart';
 import '../../features/forum/presentation/forum_page.dart';
@@ -15,7 +16,7 @@ import 'shell_page.dart';
 
 /// Rute aplikasi.
 ///
-/// - `/` beranda (tab Beranda/Cari/Pustaka/Forum)
+/// - `/` beranda (tab Beranda/Cari/Pustaka/Forum/Akun)
 /// - `/manga/:id` detail manga
 /// - `/manga/:id/read/:chapterId?title=&number=` reader
 /// - `/forum` daftar topik, `/forum/new` tulis, `/forum/:threadId` detail
@@ -40,6 +41,10 @@ final appRouter = GoRouter(
           builder: (context, state) => const LibraryPage(),
         ),
         GoRoute(path: '/forum', builder: (context, state) => const ForumPage()),
+        GoRoute(
+          path: '/account',
+          builder: (context, state) => const AccountPage(),
+        ),
       ],
     ),
     GoRoute(

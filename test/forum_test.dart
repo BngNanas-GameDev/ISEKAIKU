@@ -85,6 +85,36 @@ void main() {
 
       expect(ForumPost.tryFromRow(<String, dynamic>{'id': 'p1'}), isNull);
     });
+
+    test('topik rekomendasi membawa data manga', () {
+      final thread = ForumThread.tryFromRow(<String, dynamic>{
+        'id': 't1',
+        'user_id': 'u1',
+        'category': 'rekomendasi',
+        'title': 'Wajib baca',
+        'body': 'Ceritanya seru.',
+        'manga_id': 'm-1',
+        'manga_title': 'Frieren',
+        'manga_cover_url': 'https://cdn.example/frieren.jpg',
+      });
+
+      expect(thread, isNotNull);
+      expect(thread!.hasManga, isTrue);
+      expect(thread.mangaId, 'm-1');
+      expect(thread.mangaTitle, 'Frieren');
+      expect(thread.mangaCoverUrl, 'https://cdn.example/frieren.jpg');
+    });
+
+    test('topik tanpa manga tidak dianggap rekomendasi', () {
+      final thread = ForumThread.tryFromRow(<String, dynamic>{
+        'id': 't1',
+        'user_id': 'u1',
+        'title': 'Halo',
+        'body': 'Isi',
+      });
+
+      expect(thread!.hasManga, isFalse);
+    });
   });
 
   group('waktu relatif', () {
@@ -247,6 +277,35 @@ void main() {
       expect(find.text('Rekomendasi manga isekai'), findsOneWidget);
       expect(find.text('Budi Santoso'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
+    });
+
+    testWidgets('kartu topik rekomendasi menampilkan manga yang dibagikan', (
+      tester,
+    ) async {
+      final thread = ForumThread(
+        id: 't1',
+        authorId: 'u1',
+        authorName: 'Budi',
+        category: ForumCategory.rekomendasi,
+        title: 'Wajib baca',
+        body: 'Ceritanya seru.',
+        replyCount: 0,
+        createdAt: DateTime(2026, 11, 1),
+        lastActivityAt: DateTime(2026, 11, 1),
+        mangaId: 'm1',
+        mangaTitle: 'Frieren',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: appDarkTheme(),
+          home: Scaffold(
+            body: ForumThreadTile(thread: thread, onTap: () {}),
+          ),
+        ),
+      );
+
+      expect(find.text('Rekomendasi: Frieren'), findsOneWidget);
     });
   });
 }

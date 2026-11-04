@@ -14,6 +14,7 @@ class ShellPage extends StatelessWidget {
     '/search',
     '/library',
     '/forum',
+    '/account',
   ];
 
   int _indexFor(BuildContext context) {
@@ -90,6 +91,11 @@ class ShellPage extends StatelessWidget {
                 icon: Icon(Icons.forum_outlined),
                 selectedIcon: Icon(Icons.forum, color: AppColors.primary),
                 label: 'Forum',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person, color: AppColors.primary),
+                label: 'Akun',
               ),
             ],
           ),

@@ -40,6 +40,8 @@ class ForumThread {
     required this.createdAt,
     required this.lastActivityAt,
     this.mangaId,
+    this.mangaTitle,
+    this.mangaCoverUrl,
     this.isPinned = false,
     this.isLocked = false,
   });
@@ -54,8 +56,13 @@ class ForumThread {
   final DateTime createdAt;
   final DateTime lastActivityAt;
   final String? mangaId;
+  final String? mangaTitle;
+  final String? mangaCoverUrl;
   final bool isPinned;
   final bool isLocked;
+
+  /// True bila topik membawa rekomendasi manga.
+  bool get hasManga => mangaId != null && mangaId!.isNotEmpty;
 
   ForumThread copyWith({int? replyCount, DateTime? lastActivityAt}) {
     return ForumThread(
@@ -69,6 +76,8 @@ class ForumThread {
       createdAt: createdAt,
       lastActivityAt: lastActivityAt ?? this.lastActivityAt,
       mangaId: mangaId,
+      mangaTitle: mangaTitle,
+      mangaCoverUrl: mangaCoverUrl,
       isPinned: isPinned,
       isLocked: isLocked,
     );
@@ -95,6 +104,12 @@ class ForumThread {
       createdAt: _asDate(row['created_at']),
       lastActivityAt: _asDate(row['last_activity_at']),
       mangaId: row['manga_id'] is String ? row['manga_id'] as String : null,
+      mangaTitle: row['manga_title'] is String
+          ? row['manga_title'] as String
+          : null,
+      mangaCoverUrl: row['manga_cover_url'] is String
+          ? row['manga_cover_url'] as String
+          : null,
       isPinned: row['is_pinned'] == true,
       isLocked: row['is_locked'] == true,
     );

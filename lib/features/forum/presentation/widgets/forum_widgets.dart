@@ -137,6 +137,29 @@ class ForumThreadTile extends StatelessWidget {
                 style: AppTypography.bodySmall,
               ),
             ],
+            if (thread.hasManga) ...<Widget>[
+              const SizedBox(height: AppSpacing.s),
+              Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.menu_book_outlined,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Rekomendasi: ${thread.mangaTitle ?? 'manga'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: AppSpacing.m),
             Row(
               children: <Widget>[
