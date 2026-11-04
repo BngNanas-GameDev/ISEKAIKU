@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/config/app_config.dart';
@@ -13,8 +12,6 @@ import '../../../core/theme/app_typography.dart';
 import '../../forum/data/models/forum_models.dart';
 import '../../forum/forum_providers.dart';
 import '../../forum/presentation/widgets/forum_widgets.dart';
-import '../../legal/legal_content.dart';
-import '../../legal/presentation/legal_pages.dart';
 import '../account_providers.dart';
 import '../data/models/profile_models.dart';
 import '../data/profile_validation.dart';
@@ -272,65 +269,6 @@ class _ProfileView extends ConsumerWidget {
                   ),
               ];
             },
-          ),
-          const SizedBox(height: AppSpacing.l),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(
-              Icons.description_outlined,
-              color: AppColors.onSurfaceVariant,
-            ),
-            title: Text('Syarat Layanan', style: AppTypography.bodyMedium),
-            trailing: const Icon(
-              Icons.chevron_right,
-              color: AppColors.onSurfaceVariant,
-            ),
-            onTap: () => context.push('/legal/terms'),
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.privacy_tip_outlined,
-              color: AppColors.onSurfaceVariant,
-            ),
-            title: Text('Kebijakan Privasi', style: AppTypography.bodyMedium),
-            trailing: const Icon(
-              Icons.chevron_right,
-              color: AppColors.onSurfaceVariant,
-            ),
-            onTap: () => context.push('/legal/privacy'),
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.public,
-              color: AppColors.onSurfaceVariant,
-            ),
-            title: Text(
-              'Sumber data: MangaDex',
-              style: AppTypography.bodyMedium,
-            ),
-            subtitle: Text(
-              'mangadex.org • penggunaan non-komersial',
-              style: AppTypography.labelSmall,
-            ),
-            trailing: const Icon(
-              Icons.open_in_new,
-              size: 16,
-              color: AppColors.onSurfaceVariant,
-            ),
-            onTap: () => launchUrl(
-              Uri.parse('https://mangadex.org'),
-              mode: LaunchMode.externalApplication,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.l,
-              vertical: AppSpacing.s,
-            ),
-            child: Text(
-              'Versi dokumen ${LegalContent.version}',
-              style: AppTypography.labelSmall,
-            ),
           ),
         ],
       ),
@@ -689,56 +627,6 @@ class _SignedOutView extends StatelessWidget {
           onPressed: () => showAccountDialog(context),
           icon: const Icon(Icons.login, size: 18),
           label: const Text('Masuk dengan Google'),
-        ),
-        const SizedBox(height: AppSpacing.l),
-        const Divider(),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(
-            Icons.description_outlined,
-            color: AppColors.onSurfaceVariant,
-          ),
-          title: Text('Syarat Layanan', style: AppTypography.bodyMedium),
-          trailing: const Icon(
-            Icons.chevron_right,
-            color: AppColors.onSurfaceVariant,
-          ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (context) => const TermsPage()),
-          ),
-        ),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(
-            Icons.privacy_tip_outlined,
-            color: AppColors.onSurfaceVariant,
-          ),
-          title: Text('Kebijakan Privasi', style: AppTypography.bodyMedium),
-          trailing: const Icon(
-            Icons.chevron_right,
-            color: AppColors.onSurfaceVariant,
-          ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (context) => const PrivacyPage()),
-          ),
-        ),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.public, color: AppColors.onSurfaceVariant),
-          title: Text('Sumber data: MangaDex', style: AppTypography.bodyMedium),
-          subtitle: Text(
-            'mangadex.org • penggunaan non-komersial',
-            style: AppTypography.labelSmall,
-          ),
-          trailing: const Icon(
-            Icons.open_in_new,
-            size: 16,
-            color: AppColors.onSurfaceVariant,
-          ),
-          onTap: () => launchUrl(
-            Uri.parse('https://mangadex.org'),
-            mode: LaunchMode.externalApplication,
-          ),
         ),
       ],
     );
