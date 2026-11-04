@@ -1,0 +1,46 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Pembungkus tipis Supabase Auth.
+///
+/// Dipakai hanya kalau [AppConfig.hasSupabase] benar. Tanpa konfigurasi,
+/// aplikasi tetap berjalan penuh secara lokal.
+class AuthService {
+  AuthService(this._client);
+
+  final SupabaseClient _client;
+
+  User? get user => _client.auth.currentUser;
+
+  bool get isSignedIn => user != null;
+
+  Stream<AuthState> get changes => _client.auth.onAuthStateChange;
+
+  Future<void> signIn({required String email, required String password}) async {
+    await _client.auth.signInWithPassword(
+      email: email.trim(),
+      password: password,
+    );
+  }
+
+  Future<void> signUp({required String email, required String password}) async {
+    await _client.auth.signUp(
+      email: email.trim(),
+      password: password,
+    );
+  }
+
+  Future<void> signOut() => _client.auth.signOut();
+
+  /// Email pengguna, atau `null` bila belum masuk.
+  String? get email => user?.email;
+
+  /// Username dari metadata (diisi saat profil dibuat) atau bagian email.
+  String? get displayName {
+    final current = user;
+    if (current == null) return null;
+    final meta = current.userMetadata;
+    final username = meta?['username'];
+    if (username is String && username.trim().isNotEmpty) return username;
+    return current.email;
+  }
+}

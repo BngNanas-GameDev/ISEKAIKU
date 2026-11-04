@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../account/presentation/account_dialog.dart';
 import '../../manga/presentation/widgets/manga_card.dart';
 import '../data/library_backup.dart';
 import '../data/models/library_models.dart';
@@ -42,17 +44,26 @@ class LibraryPage extends ConsumerWidget {
                   _export(context, ref);
                 } else if (value == 'import') {
                   _import(context, ref);
+                } else if (value == 'account') {
+                  showAccountDialog(context);
                 }
               },
-              itemBuilder: (context) => const <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
+              itemBuilder: (context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
                   value: 'export',
                   child: Text('Ekspor ke clipboard'),
                 ),
-                PopupMenuItem<String>(
+                const PopupMenuItem<String>(
                   value: 'import',
                   child: Text('Impor dari clipboard'),
                 ),
+                if (AppConfig.hasSupabase)
+                  const PopupMenuDivider(),
+                if (AppConfig.hasSupabase)
+                  const PopupMenuItem<String>(
+                    value: 'account',
+                    child: Text('Akun & sinkronisasi'),
+                  ),
               ],
             ),
           ],

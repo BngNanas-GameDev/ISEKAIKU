@@ -32,6 +32,9 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   shared_preferences: ^2.2.0
 
+  # Backend opsional (akun & sinkronisasi)
+  supabase_flutter: ^2.5.0
+
   # Image caching
   cached_network_image: ^3.3.0
 

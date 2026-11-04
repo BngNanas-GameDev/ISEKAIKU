@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'core/config/app_config.dart';
 import 'core/licensing.dart';
 import 'core/network/doh/doh_http_overrides.dart';
 import 'core/storage/storage_providers.dart';
@@ -18,6 +20,16 @@ Future<void> main() async {
   // Matikan dengan: flutter run --dart-define=DISABLE_DOH=true
   const bool disableDoh = bool.fromEnvironment('DISABLE_DOH');
   HttpOverrides.global = DohHttpOverrides(enabled: !disableDoh);
+
+  // Backend opsional. Tanpa SUPABASE_URL/ANON_KEY, aplikasi tetap
+  // berjalan penuh secara lokal.
+  if (AppConfig.hasSupabase) {
+    await Supabase.initialize(
+      url: AppConfig.supabaseUrl,
+      // Nama baru untuk anon/publishable key pada supabase_flutter 2.16+.
+      publishableKey: AppConfig.supabaseAnonKey,
+    );
+  }
 
   registerAppLicenses();
 
