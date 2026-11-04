@@ -237,6 +237,10 @@ pornografi tidak pernah diminta.
 
 Aplikasi tetap **local-first**: tanpa login, semua fitur baca tetap jalan.
 
+Data Pustaka di perangkat **dipisah per akun** (termasuk mode tamu). Berganti
+akun tidak membawa riwayat dari akun sebelumnya; data lama dari versi sebelum
+pemisahan otomatis dipindahkan ke akun yang aktif saat pembaruan.
+
 Backup manual: **Pustaka → Backup Pustaka → Ekspor ke clipboard** (impor
 bersifat menggabungkan, jadi aman diulang).
 

@@ -55,8 +55,12 @@ void main() {
     );
 
     SharedPreferences.setMockInitialValues(<String, Object>{
-      LibraryStore.followedKey: <String>[jsonEncode(followed.toJson())],
-      LibraryStore.historyKey: <String>[jsonEncode(history.toJson())],
+      LibraryStore.followedKeyFor(LibraryStore.guestScope): <String>[
+        jsonEncode(followed.toJson()),
+      ],
+      LibraryStore.historyKeyFor(LibraryStore.guestScope): <String>[
+        jsonEncode(history.toJson()),
+      ],
     });
 
     await tester.pumpWidget(await _app(const LibraryPage()));
@@ -71,15 +75,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Manga Riwayat'), findsOneWidget);
-    expect(
-      find.textContaining('Chapter 7'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Chapter 7'), findsOneWidget);
   });
 
   testWidgets('hapus riwayat lewat ikon menghilangkan entri', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
-      LibraryStore.historyKey: <String>[
+      LibraryStore.historyKeyFor(LibraryStore.guestScope): <String>[
         jsonEncode(
           ReadingHistoryEntry(
             mangaId: 'manga-2',
@@ -186,10 +187,7 @@ void main() {
       final entries = container.read(readingHistoryProvider);
       expect(entries, hasLength(1));
       expect(entries.single.chapterId, 'c2');
-      expect(
-        container.read(historyEntryProvider('a'))?.chapterNumber,
-        '2',
-      );
+      expect(container.read(historyEntryProvider('a'))?.chapterNumber, '2');
     });
   });
 }

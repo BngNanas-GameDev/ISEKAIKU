@@ -11,6 +11,7 @@ import 'core/theme/app_theme.dart';
 import 'features/account/account_providers.dart';
 import 'features/account/presentation/birth_date_page.dart';
 import 'features/legal/legal_providers.dart';
+import 'features/library/library_providers.dart';
 import 'features/legal/presentation/legal_onboarding_page.dart';
 import 'features/manga/manga_providers.dart';
 
@@ -19,6 +20,9 @@ class IsekaikuApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Pastikan Pustaka ikut berpindah saat akun berganti.
+    ref.watch(libraryScopeSyncProvider);
+
     // Setelah login (atau sesi lama dipulihkan), tarik data dari cloud.
     // Dilewati sepenuhnya kalau backend belum dikonfigurasi.
     if (AppConfig.hasSupabase) {

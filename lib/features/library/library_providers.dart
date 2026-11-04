@@ -1,18 +1,52 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/auth/auth_providers.dart';
+import '../../core/config/app_config.dart';
 import '../../core/storage/storage_providers.dart';
 import '../../core/storage/storage_service.dart';
 import 'data/library_backup.dart';
 import 'data/library_store.dart';
 import 'data/models/library_models.dart';
 
-final libraryStoreProvider = Provider<LibraryStore>(
-  (ref) => LibraryStore(ref.watch(storageServiceProvider)),
-);
+/// Scope data Pustaka: id akun Supabase, atau `guest` bila belum login.
+///
+/// Data tidak dibagi antar akun, jadi riwayat tidak terbawa saat berganti
+/// akun di perangkat yang sama.
+final accountScopeProvider = Provider<String>((ref) {
+  if (!AppConfig.hasSupabase) return LibraryStore.guestScope;
+  return ref.watch(currentUserProvider)?.id ?? LibraryStore.guestScope;
+});
+
+final libraryStoreProvider = Provider<LibraryStore>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  final scope = ref.watch(accountScopeProvider);
+
+  // Pindahkan data versi lama (sebelum dipisah per akun) ke akun pertama
+  // yang membuka Pustaka.
+  LibraryStore.claimLegacy(storage, scope);
+
+  return LibraryStore(storage, scope: scope);
+});
 
 final libraryBackupServiceProvider = Provider<LibraryBackupService>(
   (ref) => LibraryBackupService(ref.watch(libraryStoreProvider)),
 );
+
+/// Bangun ulang notifier Pustaka setiap scope akun berubah.
+///
+/// Tanpa ini, notifier memegang toko akun lama sehingga riwayat akun
+/// sebelumnya tetap tampil.
+final libraryScopeSyncProvider = Provider<void>((ref) {
+  ref.listen<String>(accountScopeProvider, (previous, next) {
+    if (previous == next) return;
+
+    ref.invalidate(libraryStoreProvider);
+    ref.invalidate(libraryBackupServiceProvider);
+    ref.invalidate(followedMangaProvider);
+    ref.invalidate(readingHistoryProvider);
+    ref.invalidate(readChaptersProvider);
+  });
+});
 
 /// Urutan tampilan tab Diikuti.
 enum LibrarySort { newest, titleAz }
@@ -36,13 +70,13 @@ class LibrarySortNotifier extends StateNotifier<LibrarySort> {
 
 final librarySortProvider =
     StateNotifierProvider<LibrarySortNotifier, LibrarySort>((ref) {
-  final storage = ref.watch(storageServiceProvider);
-  final raw = storage.getString(librarySortKey, fallback: 'newest');
-  return LibrarySortNotifier(
-    storage,
-    raw == 'title' ? LibrarySort.titleAz : LibrarySort.newest,
-  );
-});
+      final storage = ref.watch(storageServiceProvider);
+      final raw = storage.getString(librarySortKey, fallback: 'newest');
+      return LibrarySortNotifier(
+        storage,
+        raw == 'title' ? LibrarySort.titleAz : LibrarySort.newest,
+      );
+    });
 
 /// Daftar manga yang diikuti, urut dari yang terbaru.
 class FollowedNotifier extends StateNotifier<List<FollowedManga>> {
@@ -77,14 +111,12 @@ class FollowedNotifier extends StateNotifier<List<FollowedManga>> {
 
 final followedMangaProvider =
     StateNotifierProvider<FollowedNotifier, List<FollowedManga>>(
-  (ref) => FollowedNotifier(ref.watch(libraryStoreProvider)),
-);
+      (ref) => FollowedNotifier(ref.watch(libraryStoreProvider)),
+    );
 
 /// Apakah manga ini sudah diikuti.
 final isFollowingProvider = Provider.family<bool, String>((ref, mangaId) {
-  return ref
-      .watch(followedMangaProvider)
-      .any((entry) => entry.id == mangaId);
+  return ref.watch(followedMangaProvider).any((entry) => entry.id == mangaId);
 });
 
 /// Riwayat baca, satu entri per manga (chapter terakhir).
@@ -136,8 +168,8 @@ class HistoryNotifier extends StateNotifier<List<ReadingHistoryEntry>> {
 
 final readingHistoryProvider =
     StateNotifierProvider<HistoryNotifier, List<ReadingHistoryEntry>>(
-  (ref) => HistoryNotifier(ref.watch(libraryStoreProvider)),
-);
+      (ref) => HistoryNotifier(ref.watch(libraryStoreProvider)),
+    );
 
 /// Chapter yang sudah pernah dibuka, per manga.
 class ReadChaptersNotifier extends StateNotifier<Map<String, Set<String>>> {
@@ -190,18 +222,22 @@ class ReadChaptersNotifier extends StateNotifier<Map<String, Set<String>>> {
 
 final readChaptersProvider =
     StateNotifierProvider<ReadChaptersNotifier, Map<String, Set<String>>>(
-  (ref) => ReadChaptersNotifier(ref.watch(libraryStoreProvider)),
-);
+      (ref) => ReadChaptersNotifier(ref.watch(libraryStoreProvider)),
+    );
 
 /// Chapter yang sudah dibaca untuk satu manga.
-final readChapterIdsProvider =
-    Provider.family<Set<String>, String>((ref, mangaId) {
+final readChapterIdsProvider = Provider.family<Set<String>, String>((
+  ref,
+  mangaId,
+) {
   return ref.watch(readChaptersProvider)[mangaId] ?? const <String>{};
 });
 
 /// Apakah satu chapter sudah pernah dibuka.
-final isChapterReadProvider =
-    Provider.family<bool, (String, String)>((ref, key) {
+final isChapterReadProvider = Provider.family<bool, (String, String)>((
+  ref,
+  key,
+) {
   final (mangaId, chapterId) = key;
   return ref.watch(readChapterIdsProvider(mangaId)).contains(chapterId);
 });
@@ -213,8 +249,10 @@ final continueReadingProvider = Provider<ReadingHistoryEntry?>((ref) {
 });
 
 /// Riwayat untuk satu manga (dipakai untuk menandai progres terakhir).
-final historyEntryProvider =
-    Provider.family<ReadingHistoryEntry?, String>((ref, mangaId) {
+final historyEntryProvider = Provider.family<ReadingHistoryEntry?, String>((
+  ref,
+  mangaId,
+) {
   final entries = ref.watch(readingHistoryProvider);
   for (final entry in entries) {
     if (entry.mangaId == mangaId) return entry;

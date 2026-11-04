@@ -5,20 +5,84 @@ import 'models/library_models.dart';
 
 /// Baca/tulis data Pustaka ke penyimpanan lokal.
 ///
+/// Data dipisah per akun (`scope` = id pengguna Supabase, atau `guest` bila
+/// belum login), supaya riwayat tidak terbawa saat berganti akun.
+///
 /// Format: `SharedPreferences` string list, satu elemen = satu JSON objek.
 /// Dekode bersifat toleran — entri rusak dilewati, bukan membuat app crash.
 class LibraryStore {
-  LibraryStore(this._storage);
+  LibraryStore(this._storage, {this.scope = guestScope});
 
   final StorageService _storage;
 
-  static const String followedKey = 'library.followed';
-  static const String historyKey = 'library.history';
-  static const String readChaptersKey = 'library.readChapters';
+  /// Scope untuk pengguna tanpa akun.
+  static const String guestScope = 'guest';
+
+  /// Id akun pemilik data (id Supabase atau [guestScope]).
+  final String scope;
+
+  static String _keyFor(String scope, String name) => 'library.$name.$scope';
+
+  static String followedKeyFor(String scope) => _keyFor(scope, 'followed');
+  static String historyKeyFor(String scope) => _keyFor(scope, 'history');
+
+  String get followedKey => _keyFor(scope, 'followed');
+  String get historyKey => _keyFor(scope, 'history');
+  String get readChaptersKey => _keyFor(scope, 'readChapters');
 
   /// Catatan penghapusan agar sinkronisasi tidak menghidupkan data lagi.
-  static const String deletedFollowedKey = 'library.deletedFollowed';
-  static const String deletedHistoryKey = 'library.deletedHistory';
+  String get deletedFollowedKey => _keyFor(scope, 'deletedFollowed');
+  String get deletedHistoryKey => _keyFor(scope, 'deletedHistory');
+
+  // --- migrasi data versi lama (sebelum data dipisah per akun) -----------
+  static const String legacyFollowedKey = 'library.followed';
+  static const String legacyHistoryKey = 'library.history';
+  static const String legacyReadChaptersKey = 'library.readChapters';
+  static const String legacyDeletedFollowedKey = 'library.deletedFollowed';
+  static const String legacyDeletedHistoryKey = 'library.deletedHistory';
+  static const String legacyClaimedKey = 'library.legacyClaimed';
+
+  /// Pindahkan data lama ke [scope] akun, sekali saja.
+  ///
+  /// Dipanggil saat toko untuk akun pertama kali dibuat. Data lama tidak
+  /// pernah dipakai oleh scope lain, jadi tidak bocor antar akun.
+  ///
+  /// [allowGuest] hanya dipakai saat startup setelah dipastikan tidak ada
+  /// sesi login, supaya pengguna tanpa akun tetap melihat riwayat lamanya.
+  static void claimLegacy(
+    StorageService storage,
+    String scope, {
+    bool allowGuest = false,
+  }) {
+    if (scope == guestScope && !allowGuest) return;
+    if (storage.getBool(legacyClaimedKey, fallback: false)) return;
+
+    // Tandai lebih dulu (cache SharedPreferences sinkron).
+    storage.setBool(legacyClaimedKey, true);
+
+    final target = LibraryStore(storage, scope: scope);
+    _copyList(storage, legacyFollowedKey, target.followedKey);
+    _copyList(storage, legacyHistoryKey, target.historyKey);
+    _copyString(storage, legacyReadChaptersKey, target.readChaptersKey);
+    _copyString(storage, legacyDeletedFollowedKey, target.deletedFollowedKey);
+    _copyString(storage, legacyDeletedHistoryKey, target.deletedHistoryKey);
+  }
+
+  static void _copyList(StorageService storage, String from, String to) {
+    final values = storage.getStringList(from);
+    if (values.isNotEmpty && storage.getStringList(to).isEmpty) {
+      storage.setStringList(to, values);
+    }
+    storage.remove(from);
+  }
+
+  static void _copyString(StorageService storage, String from, String to) {
+    final value = storage.getString(from);
+    if (value.isNotEmpty && storage.getString(to).isEmpty) {
+      storage.setString(to, value);
+    }
+    storage.remove(from);
+  }
 
   /// Batas riwayat agar tidak tumbuh tanpa henti.
   static const int historyLimit = 100;
@@ -117,7 +181,8 @@ class LibraryStore {
     );
   }
 
-  Map<String, DateTime> loadDeletedFollowed() => _loadDeletes(deletedFollowedKey);
+  Map<String, DateTime> loadDeletedFollowed() =>
+      _loadDeletes(deletedFollowedKey);
 
   Future<void> recordDeletedFollowed(String mangaId) {
     final map = loadDeletedFollowed()..[mangaId] = DateTime.now();

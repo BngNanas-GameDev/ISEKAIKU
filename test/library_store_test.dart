@@ -36,7 +36,10 @@ void main() {
     });
 
     test('json tanpa id ditolak', () {
-      expect(FollowedManga.tryFromJson(<String, dynamic>{'title': 'x'}), isNull);
+      expect(
+        FollowedManga.tryFromJson(<String, dynamic>{'title': 'x'}),
+        isNull,
+      );
     });
   });
 
@@ -63,7 +66,7 @@ void main() {
 
     test('entri rusak dilewati, entri valid tetap terbaca', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        LibraryStore.followedKey: <String>[
+        LibraryStore.followedKeyFor(LibraryStore.guestScope): <String>[
           'bukan json',
           '{"id":"ok","title":"Valid","followedAt":"2026-01-01T00:00:00.000"}',
           '{"tanpa":"id"}',
@@ -144,18 +147,21 @@ void main() {
       expect(storage.getBool('uji.bool'), isTrue);
     });
 
-    test('nilai awal mengikuti storage bila dibaca lewat pola provider', () async {
-      final storage = await StorageService.create();
-      await storage.setBool('uji.awal', true);
+    test(
+      'nilai awal mengikuti storage bila dibaca lewat pola provider',
+      () async {
+        final storage = await StorageService.create();
+        await storage.setBool('uji.awal', true);
 
-      // Provider membaca storage lalu meneruskan nilainya sebagai state awal.
-      final notifier = PersistentBoolNotifier(
-        storage,
-        'uji.awal',
-        storage.getBool('uji.awal', fallback: false),
-      );
+        // Provider membaca storage lalu meneruskan nilainya sebagai state awal.
+        final notifier = PersistentBoolNotifier(
+          storage,
+          'uji.awal',
+          storage.getBool('uji.awal', fallback: false),
+        );
 
-      expect(notifier.state, isTrue);
-    });
+        expect(notifier.state, isTrue);
+      },
+    );
   });
 }
