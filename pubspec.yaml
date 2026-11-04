@@ -104,16 +104,16 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/icon/asset-gen-424ee9ea-858d-4f46-b9ea-c7ad2aea39ed-0_0-removebg-preview.png"
+  image_path: "assets/icon/asset-gen-6e74a47e-2c10-4102-81b8-7d1d67ea83a8-0_7.png"
   adaptive_icon_background: "#222831"
-  adaptive_icon_foreground: "assets/icon/asset-gen-424ee9ea-858d-4f46-b9ea-c7ad2aea39ed-0_0-removebg-preview.png"
+  adaptive_icon_foreground: "assets/icon/asset-gen-6e74a47e-2c10-4102-81b8-7d1d67ea83a8-0_7.png"
   min_sdk_android: 24
 
 flutter_native_splash:
   color: "#222831"
-  image: "assets/icon/asset-gen-424ee9ea-858d-4f46-b9ea-c7ad2aea39ed-0_0-removebg-preview.png"
+  image: "assets/icon/asset-gen-6e74a47e-2c10-4102-81b8-7d1d67ea83a8-0_7.png"
   android: true
   web: false
   android_12:
     color: "#222831"
-    image: "assets/icon/asset-gen-424ee9ea-858d-4f46-b9ea-c7ad2aea39ed-0_0-removebg-preview.png"
+    image: "assets/icon/asset-gen-6e74a47e-2c10-4102-81b8-7d1d67ea83a8-0_7.png"

@@ -40,6 +40,14 @@ if (Test-Path $keystorePath) {
     Write-Host "Dibatalkan." -ForegroundColor Yellow
     exit 0
   }
+
+  # keytool mencoba MEMBUKA keystore lama dengan password baru dan gagal.
+  # Hapus dulu supaya benar-benar dibuat ulang.
+  Remove-Item $keystorePath -Force
+  if (Test-Path $propertiesPath) {
+    Remove-Item $propertiesPath -Force
+  }
+  Write-Host "Keystore lama dihapus." -ForegroundColor Yellow
 }
 
 Write-Host "Membuat keystore rilis..." -ForegroundColor Cyan
