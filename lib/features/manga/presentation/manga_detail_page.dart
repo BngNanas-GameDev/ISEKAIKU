@@ -29,11 +29,11 @@ class MangaDetailPage extends ConsumerWidget {
       body: switch (detail) {
         AsyncData(:final value) => _DetailBody(manga: value),
         AsyncError(:final error) => SafeArea(
-            child: ErrorRetry(
-              error: error,
-              onRetry: () => ref.invalidate(mangaDetailProvider(mangaId)),
-            ),
+          child: ErrorRetry(
+            error: error,
+            onRetry: () => ref.invalidate(mangaDetailProvider(mangaId)),
           ),
+        ),
         _ => const SafeArea(child: MangaDetailSkeleton()),
       },
     );
@@ -61,6 +61,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
       manga.coverUrl,
       dataSaver: ref.watch(dataSaverProvider),
     );
+    final int decodeWidth =
+        (MediaQuery.sizeOf(context).width *
+                MediaQuery.devicePixelRatioOf(context))
+            .round();
 
     final availability = switch (chapters) {
       AsyncData(:final value) => ChapterRange.from(value, manga.status),
@@ -77,9 +81,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          actions: <Widget>[
-            _FollowButton(manga: manga),
-          ],
+          actions: <Widget>[_FollowButton(manga: manga)],
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(
               fit: StackFit.expand,
@@ -87,6 +89,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                 if (cover != null)
                   CachedNetworkImage(
                     imageUrl: cover,
+                    memCacheWidth: decodeWidth,
                     fit: BoxFit.cover,
                     placeholder: (context, url) =>
                         const ColoredBox(color: AppColors.surfaceContainer),
@@ -233,10 +236,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     children: <Widget>[
                       _RangeBadge(label: availability.label),
                       if (availability.complete)
-                        const _RangeBadge(
-                          label: 'Lengkap',
-                          highlight: true,
-                        ),
+                        const _RangeBadge(label: 'Lengkap', highlight: true),
                       TextButton(
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -246,7 +246,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                         onPressed: () {
                           final list = chapters.valueOrNull;
                           if (list == null || list.isEmpty) return;
-                          ref.read(readChaptersProvider.notifier).markAllRead(
+                          ref
+                              .read(readChaptersProvider.notifier)
+                              .markAllRead(
                                 manga.id,
                                 list.map((chapter) => chapter.id),
                               );
@@ -262,8 +264,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                         },
                         child: Text(
                           'Tandai semua',
-                          style: AppTypography.labelSmall
-                              .copyWith(color: AppColors.primary),
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -276,60 +279,58 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         ),
         ...switch (chapters) {
           AsyncData(:final value) when value.isEmpty => <Widget>[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.l),
-                  child: Text(
-                    'Belum ada chapter ${language.toUpperCase()} yang bisa '
-                    'dibaca. Coba bahasa lain di atas. Jika judul ini '
-                    'berating Erotika, aktifkan "Konten 18+" di menu Pustaka.',
-                    style: AppTypography.bodySmall,
-                  ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.l),
+                child: Text(
+                  'Belum ada chapter ${language.toUpperCase()} yang bisa '
+                  'dibaca. Coba bahasa lain di atas. Jika judul ini '
+                  'berating Erotika, aktifkan "Konten 18+" di menu Pustaka.',
+                  style: AppTypography.bodySmall,
                 ),
               ),
-            ],
+            ),
+          ],
           AsyncData(:final value) => <Widget>[
-              SliverList.builder(
-                itemCount: value.length,
-                itemBuilder: (context, index) => _ChapterTile(
-                  mangaId: manga.id,
-                  chapter: value[index],
-                ),
-              ),
-            ],
+            SliverList.builder(
+              itemCount: value.length,
+              itemBuilder: (context, index) =>
+                  _ChapterTile(mangaId: manga.id, chapter: value[index]),
+            ),
+          ],
           AsyncError(:final error) => <Widget>[
-              SliverToBoxAdapter(
-                child: ErrorRetry(
-                  error: error,
-                  onRetry: () =>
-                      ref.invalidate(chapterListProvider(manga.id)),
-                ),
+            SliverToBoxAdapter(
+              child: ErrorRetry(
+                error: error,
+                onRetry: () => ref.invalidate(chapterListProvider(manga.id)),
               ),
-            ],
+            ),
+          ],
           _ => <Widget>[
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.xxl),
-                  child: Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: AppColors.primary,
-                      ),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.xxl),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
+          ],
         },
         const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
       ],
     );
   }
 
-  String _statusLabel(String status) {    switch (status) {
+  String _statusLabel(String status) {
+    switch (status) {
       case 'completed':
         return 'Tamat';
       case 'hiatus':
@@ -402,15 +403,8 @@ class _ChapterTile extends ConsumerWidget {
         style: AppTypography.labelSmall,
       ),
       trailing: read
-          ? const Icon(
-              Icons.check_circle,
-              size: 20,
-              color: AppColors.primary,
-            )
-          : const Icon(
-              Icons.chevron_right,
-              color: AppColors.onSurfaceVariant,
-            ),
+          ? const Icon(Icons.check_circle, size: 20, color: AppColors.primary)
+          : const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
     );
   }
 }
@@ -481,7 +475,9 @@ class _FollowButton extends ConsumerWidget {
       icon: Icon(following ? Icons.bookmark : Icons.bookmark_border),
       color: following ? AppColors.primary : AppColors.onSurface,
       onPressed: () {
-        ref.read(followedMangaProvider.notifier).toggle(
+        ref
+            .read(followedMangaProvider.notifier)
+            .toggle(
               FollowedManga(
                 id: manga.id,
                 title: manga.title,
@@ -495,9 +491,7 @@ class _FollowButton extends ConsumerWidget {
           ..showSnackBar(
             SnackBar(
               content: Text(
-                following
-                    ? 'Dihapus dari Pustaka'
-                    : 'Ditambahkan ke Pustaka',
+                following ? 'Dihapus dari Pustaka' : 'Ditambahkan ke Pustaka',
               ),
               duration: const Duration(seconds: 2),
             ),
@@ -539,10 +533,7 @@ class _RangeBadge extends StatelessWidget {
             color: color,
           ),
           const SizedBox(width: AppSpacing.xs),
-          Text(
-            label,
-            style: AppTypography.labelSmall.copyWith(color: color),
-          ),
+          Text(label, style: AppTypography.labelSmall.copyWith(color: color)),
         ],
       ),
     );

@@ -64,7 +64,8 @@ class RemoteMapping {
       title: title,
       coverUrl: row['cover_url'] as String?,
       author: row['author'] as String? ?? '',
-      followedAt: _parseTime(row['followed_at']) ??
+      followedAt:
+          _parseTime(row['followed_at']) ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
@@ -83,8 +84,8 @@ class RemoteMapping {
       chapterTitle: row['chapter_title'] as String? ?? '',
       page: (row['page'] as num?)?.toInt() ?? 0,
       totalPages: (row['total_pages'] as num?)?.toInt() ?? 0,
-      readAt: _parseTime(row['read_at']) ??
-          DateTime.fromMillisecondsSinceEpoch(0),
+      readAt:
+          _parseTime(row['read_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -198,32 +199,66 @@ class RemoteLibrary {
     return DateTime.tryParse(value)?.toLocal();
   }
 
+  /// Hapus entri di server, lalu buang tombstone hanya untuk id yang
+  /// benar-benar sudah tidak ada. Jika delete gagal/RLS menolak, tombstone
+  /// tetap disimpan supaya data tidak muncul lagi di perangkat ini.
+  Future<void> _deleteRemoteEntries({
+    required String table,
+    required String userId,
+    required Map<String, DateTime> tombstones,
+    required Future<void> Function(Iterable<String> ids) forget,
+  }) async {
+    final List<String> ids = tombstones.keys.toList(growable: false);
+    if (ids.isEmpty) return;
+
+    await _client
+        .from(table)
+        .delete()
+        .eq('user_id', userId)
+        .inFilter('manga_id', ids);
+
+    final rows = await _client
+        .from(table)
+        .select('manga_id')
+        .eq('user_id', userId)
+        .inFilter('manga_id', ids);
+
+    final Set<String> remaining = (rows as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .map((row) => row['manga_id'])
+        .whereType<String>()
+        .toSet();
+
+    final List<String> gone = ids
+        .where((id) => !remaining.contains(id))
+        .toList(growable: false);
+    if (gone.isNotEmpty) await forget(gone);
+  }
+
   Future<void> push(String userId) async {
     // Kirim penghapusan lebih dulu, supaya server tidak lagi menyimpan data
     // yang sudah tidak diikuti pengguna.
     final deletedFollowed = _store.loadDeletedFollowed();
-    if (deletedFollowed.isNotEmpty) {
-      await _client
-          .from('library_entries')
-          .delete()
-          .eq('user_id', userId)
-          .inFilter('manga_id', deletedFollowed.keys.toList());
-      await _store.clearDeletedFollowed();
-    }
+    await _deleteRemoteEntries(
+      table: 'library_entries',
+      userId: userId,
+      tombstones: deletedFollowed,
+      forget: _store.forgetDeletedFollowed,
+    );
 
     final deletedHistory = _store.loadDeletedHistory();
-    if (deletedHistory.isNotEmpty) {
-      await _client
-          .from('reading_progress')
-          .delete()
-          .eq('user_id', userId)
-          .inFilter('manga_id', deletedHistory.keys.toList());
-      await _store.clearDeletedHistory();
-    }
+    await _deleteRemoteEntries(
+      table: 'reading_progress',
+      userId: userId,
+      tombstones: deletedHistory,
+      forget: _store.forgetDeletedHistory,
+    );
 
     final followed = _store.loadFollowed();
     if (followed.isNotEmpty) {
-      await _client.from('library_entries').upsert(
+      await _client
+          .from('library_entries')
+          .upsert(
             followed
                 .map((e) => RemoteMapping.followedRow(userId, e))
                 .toList(growable: false),
@@ -232,7 +267,9 @@ class RemoteLibrary {
 
     final history = _store.loadHistory();
     if (history.isNotEmpty) {
-      await _client.from('reading_progress').upsert(
+      await _client
+          .from('reading_progress')
+          .upsert(
             history
                 .map((e) => RemoteMapping.progressRow(userId, e))
                 .toList(growable: false),
@@ -248,9 +285,7 @@ class RemoteLibrary {
     });
     for (var i = 0; i < rows.length; i += _chunk) {
       final end = (i + _chunk < rows.length) ? i + _chunk : rows.length;
-      await _client
-          .from('read_chapters')
-          .upsert(rows.sublist(i, end));
+      await _client.from('read_chapters').upsert(rows.sublist(i, end));
     }
   }
 }

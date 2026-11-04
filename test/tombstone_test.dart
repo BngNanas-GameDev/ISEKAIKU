@@ -35,6 +35,32 @@ void main() {
       expect(store.loadDeletedHistory().keys, contains('m2'));
       expect(store.loadDeletedFollowed(), isEmpty);
     });
+
+    test('forgetDeletedFollowed hanya membuang id yang diminta', () async {
+      final storage = await StorageService.create();
+      final store = LibraryStore(storage);
+
+      await store.recordDeletedFollowed('m1');
+      await store.recordDeletedFollowed('m2');
+      await store.forgetDeletedFollowed(<String>['m1']);
+
+      final deleted = store.loadDeletedFollowed();
+      expect(deleted.containsKey('m1'), isFalse);
+      expect(deleted.containsKey('m2'), isTrue);
+    });
+
+    test('forgetDeletedHistory hanya membuang id yang diminta', () async {
+      final storage = await StorageService.create();
+      final store = LibraryStore(storage);
+
+      await store.recordDeletedHistory('m1');
+      await store.recordDeletedHistory('m2');
+      await store.forgetDeletedHistory(<String>['m2']);
+
+      final deleted = store.loadDeletedHistory();
+      expect(deleted.containsKey('m1'), isTrue);
+      expect(deleted.containsKey('m2'), isFalse);
+    });
   });
 
   group('notifier mencatat tombstone saat menghapus', () {

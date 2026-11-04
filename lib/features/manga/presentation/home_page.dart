@@ -401,22 +401,24 @@ class _PopularCarouselState extends State<_PopularCarousel> {
     return SliverToBoxAdapter(
       child: Column(
         children: <Widget>[
-          SizedBox(
-            height: 300,
-            child: PageView.builder(
-              controller: _controller,
-              padEnds: false,
-              itemCount: items.length,
-              onPageChanged: (index) => setState(() => _page = index),
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    left: index == 0 ? AppSpacing.l : AppSpacing.s,
-                    right: AppSpacing.s,
-                  ),
-                  child: _PopularCard(manga: items[index]),
-                );
-              },
+          RepaintBoundary(
+            child: SizedBox(
+              height: 300,
+              child: PageView.builder(
+                controller: _controller,
+                padEnds: false,
+                itemCount: items.length,
+                onPageChanged: (index) => setState(() => _page = index),
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      left: index == 0 ? AppSpacing.l : AppSpacing.s,
+                      right: AppSpacing.s,
+                    ),
+                    child: _PopularCard(manga: items[index]),
+                  );
+                },
+              ),
             ),
           ),
           if (items.length > 1) ...<Widget>[
@@ -460,6 +462,10 @@ class _PopularCard extends ConsumerWidget {
       manga.coverUrl,
       dataSaver: ref.watch(dataSaverProvider),
     );
+    final int decodeWidth =
+        ((MediaQuery.sizeOf(context).width * 0.76) *
+                MediaQuery.devicePixelRatioOf(context))
+            .round();
 
     return InkWell(
       borderRadius: BorderRadius.circular(AppRadius.l),
@@ -472,6 +478,7 @@ class _PopularCard extends ConsumerWidget {
             if (cover != null)
               CachedNetworkImage(
                 imageUrl: cover,
+                memCacheWidth: decodeWidth,
                 fit: BoxFit.cover,
                 placeholder: (context, url) =>
                     const ColoredBox(color: AppColors.surfaceContainerHigh),

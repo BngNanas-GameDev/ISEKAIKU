@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/auth/auth_providers.dart';
 import '../../core/storage/storage_providers.dart';
 import '../../core/storage/storage_service.dart';
 import '../account/account_providers.dart';
@@ -95,15 +96,15 @@ final showAdultContentProvider =
 ///
 /// Status tidak punya masa berlaku: selama tanggal lahir memenuhi syarat,
 /// akses tetap berlaku tanpa isi ulang.
-final adultContentEnabledProvider = Provider<bool>((ref) {
+Future<bool> _adultEnabled(Ref ref) async {
   if (!ref.watch(showAdultContentProvider)) return false;
-  if (ref.watch(currentUserProvider) == null) return false;
 
-  final birthDate = ref.watch(currentProfileProvider).valueOrNull?.birthDate;
+  final profile = await ref.watch(currentProfileProvider.future);
+  final DateTime? birthDate = profile?.birthDate;
   if (birthDate == null) return false;
 
   return AdultPolicy.isAdult(birthDate);
-});
+}
 
 /// Mode reader: true = webtoon (scroll vertikal), false = paged.
 final webtoonModeProvider = StateNotifierProvider<PersistentBoolNotifier, bool>(
@@ -117,17 +118,28 @@ final webtoonModeProvider = StateNotifierProvider<PersistentBoolNotifier, bool>(
   },
 );
 
+/// Tahan hasil di memori sebentar agar pindah tab tidak memicu request ulang.
+void _keepFor(Ref ref, Duration ttl) {
+  final link = ref.keepAlive();
+  final timer = Timer(ttl, link.close);
+  ref.onDispose(timer.cancel);
+}
+
 /// Manga populer untuk beranda.
 ///
-/// Judul yang tidak punya chapter pada bahasa terpilih disaring keluar.
+/// Judul tanpa chapter pada bahasa terpilih tetap disaring. Pemeriksaan
+/// memakai probe client (240 ms/req) + cache 6 jam, jadi hanya lambat sekali.
 final popularMangaProvider = FutureProvider.autoDispose<List<Manga>>((
   ref,
 ) async {
+  _keepFor(ref, const Duration(minutes: 5));
+
   final language = ref.watch(chapterLanguageProvider);
-  final adult = ref.watch(adultContentEnabledProvider);
+  final adult = await _adultEnabled(ref);
   final list = await ref
       .watch(mangaDexApiProvider)
       .popular(limit: 20, language: language, adult: adult);
+
   return ref
       .watch(chapterAvailabilityProvider)
       .filterAvailable(list, (manga) => manga.id, language, adult: adult);
@@ -137,11 +149,14 @@ final popularMangaProvider = FutureProvider.autoDispose<List<Manga>>((
 final latestMangaProvider = FutureProvider.autoDispose<List<Manga>>((
   ref,
 ) async {
+  _keepFor(ref, const Duration(minutes: 3));
+
   final language = ref.watch(chapterLanguageProvider);
-  final adult = ref.watch(adultContentEnabledProvider);
+  final adult = await _adultEnabled(ref);
   final list = await ref
       .watch(mangaDexApiProvider)
       .latest(limit: 20, language: language, adult: adult);
+
   return ref
       .watch(chapterAvailabilityProvider)
       .filterAvailable(list, (manga) => manga.id, language, adult: adult);
@@ -155,9 +170,9 @@ final mangaDetailProvider = FutureProvider.autoDispose.family<Manga, String>((
 });
 
 final chapterListProvider = FutureProvider.autoDispose
-    .family<List<Chapter>, String>((ref, mangaId) {
+    .family<List<Chapter>, String>((ref, mangaId) async {
       final language = ref.watch(chapterLanguageProvider);
-      final adult = ref.watch(adultContentEnabledProvider);
+      final adult = await _adultEnabled(ref);
       return ref
           .watch(mangaDexApiProvider)
           .chapters(mangaId, language: language, adult: adult);
@@ -176,7 +191,7 @@ final chapterPagesProvider = FutureProvider.autoDispose
 final searchResultsProvider = FutureProvider.autoDispose
     .family<List<Manga>, String>((ref, query) async {
       if (query.trim().isEmpty) return <Manga>[];
-      final adult = ref.watch(adultContentEnabledProvider);
+      final adult = await _adultEnabled(ref);
       return ref.watch(mangaDexApiProvider).search(query.trim(), adult: adult);
     });
 
@@ -273,9 +288,11 @@ final browseFilterProvider =
 final browseResultsProvider = FutureProvider.autoDispose<List<Manga>>((
   ref,
 ) async {
+  _keepFor(ref, const Duration(minutes: 5));
+
   final filter = ref.watch(browseFilterProvider);
   final language = ref.watch(chapterLanguageProvider);
-  final adult = ref.watch(adultContentEnabledProvider);
+  final adult = await _adultEnabled(ref);
 
   final order = switch (filter.order) {
     BrowseOrder.popular => 'followedCount',

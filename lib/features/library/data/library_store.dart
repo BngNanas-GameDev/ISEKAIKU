@@ -192,6 +192,15 @@ class LibraryStore {
   Future<void> clearDeletedFollowed() =>
       _saveDeletes(deletedFollowedKey, <String, DateTime>{});
 
+  /// Hapus sebagian tombstone (yang sudah dipastikan hilang di server).
+  Future<void> forgetDeletedFollowed(Iterable<String> mangaIds) {
+    final map = loadDeletedFollowed();
+    for (final id in mangaIds) {
+      map.remove(id);
+    }
+    return _saveDeletes(deletedFollowedKey, map);
+  }
+
   Map<String, DateTime> loadDeletedHistory() => _loadDeletes(deletedHistoryKey);
 
   Future<void> recordDeletedHistory(String mangaId) {
@@ -201,6 +210,15 @@ class LibraryStore {
 
   Future<void> clearDeletedHistory() =>
       _saveDeletes(deletedHistoryKey, <String, DateTime>{});
+
+  /// Hapus sebagian tombstone riwayat yang sudah dipastikan hilang di server.
+  Future<void> forgetDeletedHistory(Iterable<String> mangaIds) {
+    final map = loadDeletedHistory();
+    for (final id in mangaIds) {
+      map.remove(id);
+    }
+    return _saveDeletes(deletedHistoryKey, map);
+  }
 
   Map<String, dynamic>? _decode(String raw) {
     try {

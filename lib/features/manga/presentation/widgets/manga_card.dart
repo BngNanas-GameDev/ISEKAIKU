@@ -21,6 +21,9 @@ class MangaCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bool dataSaver = ref.watch(dataSaverProvider);
     final String? cover = coverUrlFor(manga.coverUrl, dataSaver: dataSaver);
+    final double dpr = MediaQuery.devicePixelRatioOf(context);
+    final int decodeWidth = ((MediaQuery.sizeOf(context).width / 3) * dpr)
+        .round();
 
     return GestureDetector(
       onTap: () => context.push('/manga/${manga.id}'),
@@ -34,6 +37,7 @@ class MangaCard extends ConsumerWidget {
               if (cover != null)
                 CachedNetworkImage(
                   imageUrl: cover,
+                  memCacheWidth: decodeWidth,
                   fit: BoxFit.cover,
                   fadeInDuration: const Duration(milliseconds: 200),
                   placeholder: (context, url) =>

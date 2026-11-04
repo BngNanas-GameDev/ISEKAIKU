@@ -89,9 +89,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           .read(mangaDetailProvider(widget.mangaId).future)
           .then((detail) {
             if (!mounted) return;
-            final current =
-                ref.read(readingHistoryProvider.notifier).entryFor(widget.mangaId);
-            if (current == null || current.chapterId != widget.chapterId) return;
+            final current = ref
+                .read(readingHistoryProvider.notifier)
+                .entryFor(widget.mangaId);
+            if (current == null || current.chapterId != widget.chapterId) {
+              return;
+            }
             _write(
               page: page,
               total: total,
@@ -109,7 +112,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     required String title,
     String? coverUrl,
   }) {
-    ref.read(readingHistoryProvider.notifier).record(
+    ref
+        .read(readingHistoryProvider.notifier)
+        .record(
           ReadingHistoryEntry(
             mangaId: widget.mangaId,
             mangaTitle: title,
@@ -155,27 +160,27 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       body: switch (pagesAsync) {
         AsyncData(:final value) => _buildReader(value, saver, webtoon),
         AsyncError(:final error) => SafeArea(
-            child: Stack(
-              children: <Widget>[
-                ErrorRetry(
-                  error: error,
-                  onRetry: () =>
-                      ref.invalidate(chapterPagesProvider(widget.chapterId)),
+          child: Stack(
+            children: <Widget>[
+              ErrorRetry(
+                error: error,
+                onRetry: () =>
+                    ref.invalidate(chapterPagesProvider(widget.chapterId)),
+              ),
+              Positioned(
+                top: AppSpacing.s,
+                left: AppSpacing.s,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => context.pop(),
                 ),
-                Positioned(
-                  top: AppSpacing.s,
-                  left: AppSpacing.s,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.pop(),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
         _ => const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       },
     );
   }
@@ -196,7 +201,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
     if (urls.isEmpty) {
       return const Center(
-        child: Text('Chapter tidak memiliki halaman.', style: AppTypography.bodySmall),
+        child: Text(
+          'Chapter tidak memiliki halaman.',
+          style: AppTypography.bodySmall,
+        ),
       );
     }
 
@@ -306,10 +314,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             onSettings: _showSettings,
           ),
           if (!webtoon)
-            _PageIndicator(
-              current: _currentPage + 1,
-              total: urls.length,
-            ),
+            _PageIndicator(current: _currentPage + 1, total: urls.length),
         ],
       ],
     );
@@ -317,7 +322,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   String get _chapterLabel {
     if (widget.chapterTitle.isNotEmpty) return widget.chapterTitle;
-    if (widget.chapterNumber.isNotEmpty) return 'Chapter ${widget.chapterNumber}';
+    if (widget.chapterNumber.isNotEmpty) {
+      return 'Chapter ${widget.chapterNumber}';
+    }
     return 'Reader';
   }
 
@@ -334,12 +341,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   /// Chapter sebelum/berikutnya pada bahasa yang sama.
   Chapter? _adjacentChapter(int delta) {
-    final chapters =
-        ref.read(chapterListProvider(widget.mangaId)).valueOrNull;
+    final chapters = ref.read(chapterListProvider(widget.mangaId)).valueOrNull;
     if (chapters == null || chapters.isEmpty) return null;
 
-    final int index =
-        chapters.indexWhere((Chapter c) => c.id == widget.chapterId);
+    final int index = chapters.indexWhere(
+      (Chapter c) => c.id == widget.chapterId,
+    );
     if (index < 0) return null;
 
     final int target = index + delta;
@@ -389,10 +396,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     if (_endHintShown) return;
     _endHintShown = true;
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
     Future<void>.delayed(const Duration(seconds: 3), () {
       if (mounted) _endHintShown = false;
@@ -437,7 +441,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 const SizedBox(height: AppSpacing.l),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Mode webtoon', style: AppTypography.bodyMedium),
+                  title: const Text(
+                    'Mode webtoon',
+                    style: AppTypography.bodyMedium,
+                  ),
                   subtitle: const Text(
                     'Scroll vertikal, cocok untuk chapter panjang',
                     style: AppTypography.labelSmall,
@@ -449,7 +456,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Hemat kuota', style: AppTypography.bodyMedium),
+                  title: const Text(
+                    'Hemat kuota',
+                    style: AppTypography.bodyMedium,
+                  ),
                   subtitle: const Text(
                     'Pakai gambar kualitas data-saver',
                     style: AppTypography.labelSmall,
@@ -486,8 +496,15 @@ class _ReaderImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final int decodeWidth =
+        (MediaQuery.sizeOf(context).width *
+                MediaQuery.devicePixelRatioOf(context) *
+                2)
+            .round();
+
     return CachedNetworkImage(
       imageUrl: url,
+      memCacheWidth: decodeWidth,
       fit: fit,
       width: double.infinity,
       fadeInDuration: const Duration(milliseconds: 150),
@@ -543,10 +560,7 @@ class _TopBar extends StatelessWidget {
           bottom: false,
           child: Row(
             children: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: onBack,
-              ),
+              IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
               Expanded(
                 child: Text(
                   title,
@@ -555,10 +569,7 @@ class _TopBar extends StatelessWidget {
                   style: AppTypography.labelLarge,
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.tune),
-                onPressed: onSettings,
-              ),
+              IconButton(icon: const Icon(Icons.tune), onPressed: onSettings),
             ],
           ),
         ),
