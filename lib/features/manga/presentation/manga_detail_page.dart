@@ -152,6 +152,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     _MetaChip(label: _statusLabel(manga.status)),
                     if (manga.year.isNotEmpty) _MetaChip(label: manga.year),
                     _MetaChip(label: _ratingLabel(manga.contentRating)),
+                    if (manga.contentRating == 'erotica' ||
+                        manga.contentRating == 'pornographic')
+                      const _MetaChip(label: '18+'),
                     _MetaChip(label: '${_formatCount(manga.follows)} follower'),
                   ],
                 ),

@@ -12,6 +12,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../account/presentation/account_dialog.dart';
 import '../../manga/manga_providers.dart';
+import '../../manga/presentation/widgets/adult_age_gate.dart';
 import '../../manga/presentation/widgets/manga_card.dart';
 import '../data/library_backup.dart';
 import '../data/models/library_models.dart';
@@ -174,48 +175,31 @@ class LibraryPage extends ConsumerWidget {
     }
   }
 
-  /// Nyalakan/matikan judul rating erotika & dewasa.
+  /// Nyalakan/matikan judul rating erotika (18+).
   ///
-  /// MangaDex menyembunyikan rating tersebut dari API kecuali diminta, jadi
-  /// tanpa opsi ini judul 18+ tidak akan pernah muncul di pencarian.
+  /// Kebijakan: hanya `erotica` yang bisa dibuka, `pornographic` selalu
+  /// ditolak. Mengaktifkan wajib melewati verifikasi tanggal lahir.
   Future<void> _toggleAdult(BuildContext context, WidgetRef ref) async {
     final bool active = ref.read(showAdultContentProvider);
     if (active) {
-      ref.read(showAdultContentProvider.notifier).set(false);
+      ref.read(showAdultContentProvider.notifier).disable();
       _invalidateCatalog(ref);
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainer,
-        title: const Text(
-          'Aktifkan konten 18+?',
-          style: AppTypography.titleMedium,
-        ),
-        content: const Text(
-          'Judul dengan rating Erotika dan Dewasa akan muncul di Beranda, '
-          'Jelajah, dan Pencarian.\n\n'
-          'Dengan mengaktifkan, kamu menyatakan berusia 18 tahun ke atas.',
-          style: AppTypography.bodySmall,
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Aktifkan'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
+    final bool verified = await showAdultAgeGate(context);
+    if (!verified || !context.mounted) return;
 
-    ref.read(showAdultContentProvider.notifier).set(true);
+    ref.read(showAdultContentProvider.notifier).enable();
     _invalidateCatalog(ref);
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Konten 18+ aktif. Verifikasi berlaku 30 hari.'),
+        ),
+      );
   }
 
   void _invalidateCatalog(WidgetRef ref) {

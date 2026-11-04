@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/storage_providers.dart';
+import '../../core/storage/storage_service.dart';
 import 'data/chapter_availability.dart';
 import 'data/mangadex_api.dart';
 import 'data/models/manga.dart';
@@ -46,21 +47,62 @@ final dataSaverProvider = StateNotifierProvider<PersistentBoolNotifier, bool>((
   );
 });
 
-/// Tampilkan judul dengan rating erotika/dewasa (18+).
+/// Tampilkan judul dengan rating erotika (18+).
 ///
-/// Nonaktif secara bawaan: MangaDex menyembunyikan judul rating `erotica`
-/// dan `pornographic` dari daftar, sehingga judul seperti itu tidak muncul
-/// di pencarian sampai opsi ini dinyalakan.
+/// Kebijakan:
+/// - Nonaktif secara bawaan.
+/// - Hanya rating `erotica` yang dibuka; `pornographic` **selalu** ditolak.
+/// - Verifikasi usia berlaku 30 hari, lalu wajib diverifikasi ulang.
+/// - Tanggal lahir tidak disimpan; hanya status verifikasi + waktunya.
 const String catalogAdultKey = 'catalog.showAdult';
+const String catalogAdultSinceKey = 'catalog.adultSince';
+
+/// Verifikasi usia kedaluwarsa setelah 30 hari.
+const Duration adultVerificationTtl = Duration(days: 30);
+
+class AdultContentNotifier extends StateNotifier<bool> {
+  AdultContentNotifier(this._storage) : super(_stillValid(_storage)) {
+    // Bersihkan flag lama yang sudah kedaluwarsa/tidak lengkap.
+    if (!state && _storage.getBool(catalogAdultKey, fallback: false)) {
+      _storage.setBool(catalogAdultKey, false);
+      _storage.remove(catalogAdultSinceKey);
+    }
+  }
+
+  final StorageService _storage;
+
+  static bool _stillValid(StorageService storage) {
+    if (!storage.getBool(catalogAdultKey, fallback: false)) return false;
+
+    final DateTime? since = DateTime.tryParse(
+      storage.getString(catalogAdultSinceKey),
+    );
+    if (since == null) return false;
+
+    final Duration age = DateTime.now().difference(since);
+    if (age.isNegative || age > adultVerificationTtl) return false;
+    return true;
+  }
+
+  /// Aktifkan setelah gerbang tanggal lahir lolos.
+  void enable() {
+    final DateTime now = DateTime.now();
+    _storage.setBool(catalogAdultKey, true);
+    _storage.setString(catalogAdultSinceKey, now.toUtc().toIso8601String());
+    state = true;
+  }
+
+  /// Matikan dan hapus bukti verifikasi.
+  void disable() {
+    _storage.setBool(catalogAdultKey, false);
+    _storage.remove(catalogAdultSinceKey);
+    state = false;
+  }
+}
 
 final showAdultContentProvider =
-    StateNotifierProvider<PersistentBoolNotifier, bool>((ref) {
-      final storage = ref.watch(storageServiceProvider);
-      return PersistentBoolNotifier(
-        storage,
-        catalogAdultKey,
-        storage.getBool(catalogAdultKey, fallback: false),
-      );
+    StateNotifierProvider<AdultContentNotifier, bool>((ref) {
+      return AdultContentNotifier(ref.watch(storageServiceProvider));
     });
 
 /// Mode reader: true = webtoon (scroll vertikal), false = paged.

@@ -52,6 +52,13 @@ class MangaCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (manga.contentRating == 'erotica' ||
+                  manga.contentRating == 'pornographic')
+                const Positioned(
+                  top: AppSpacing.s,
+                  left: AppSpacing.s,
+                  child: _AdultBadge(),
+                ),
               Positioned(
                 left: AppSpacing.s,
                 right: AppSpacing.s,
@@ -69,6 +76,29 @@ class MangaCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Penanda konten dewasa pada kartu.
+class _AdultBadge extends StatelessWidget {
+  const _AdultBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(AppRadius.s),
+      ),
+      child: Text(
+        '18+',
+        style: AppTypography.labelSmall.copyWith(
+          color: AppColors.background,
+          height: 1.1,
         ),
       ),
     );
@@ -133,10 +163,7 @@ class ErrorRetry extends StatelessWidget {
               style: AppTypography.bodySmall,
             ),
             const SizedBox(height: AppSpacing.l),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: const Text('Coba lagi'),
-            ),
+            OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi')),
           ],
         ),
       ),

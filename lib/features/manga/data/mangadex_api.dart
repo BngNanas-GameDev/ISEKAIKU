@@ -26,12 +26,13 @@ class MangaDexApi {
 
   /// Rating konten yang diminta.
   ///
-  /// `erotica` dan `pornographic` hanya diikutkan bila pengguna mengaktifkan
-  /// konten 18+ di Pustaka. Tanpa itu, judul dengan rating tersebut tidak
-  /// pernah muncul di hasil pencarian/jelajah.
+  /// Kebijakan 18+:
+  /// - Tanpa verifikasi: hanya `safe` + `suggestive`.
+  /// - Setelah verifikasi: `erotica` ikut, tetapi `pornographic` **tidak
+  ///   pernah** diminta. Konten pornografi tidak disediakan aplikasi.
   static List<String> contentRatings({required bool adult}) {
     return adult
-        ? const <String>['safe', 'suggestive', 'erotica', 'pornographic']
+        ? const <String>['safe', 'suggestive', 'erotica']
         : const <String>['safe', 'suggestive'];
   }
 

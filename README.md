@@ -192,9 +192,10 @@ Manga-first sampai rilis. Anime ditunda sampai aplikasi terbukti dipakai.
       urutan), riwayat pencarian, urutkan Pustaka (terbaru / A–Z), tandai
       semua chapter terbaca
       (catatan: filter Pustaka berdasarkan status baca belum dibuat)
-- [x] M4b Konten 18+: opt-in "Konten 18+" di menu Pustaka untuk judul
-      rating Erotika/Dewasa (bawaan mati; pencarian tidak lagi menyembunyikan
-      judul yang belum punya chapter di bahasa aktif)
+- [x] M4b Konten 18+: verifikasi tanggal lahir (18+, berlaku 30 hari, tanpa
+      menyimpan tanggal lahir), hanya rating Erotika — pornografi tidak
+      pernah diminta. Pencarian tidak lagi menyembunyikan judul yang belum
+      punya chapter di bahasa aktif. Lihat `docs/kebijakan-konten.md`.
 - [ ] M5 Rilis: skeleton/empty state, hemat data, lokalisasi, ikon adaptif,
       splash, release signing, QA
 - [x] M6 Akun Supabase + sinkronisasi Pustaka (Google OAuth, tombstone)
@@ -223,6 +224,10 @@ Semuanya lengkap dengan **RLS** dan **trigger moderasi** server-side.
 Panduan langkah demi langkah (login Google, SHA-1 debug/release, moderasi
 forum, dan keep-alive free tier lewat cron-job.org):
 `docs/supabase-setup.md`.
+
+Kebijakan konten 18+: `docs/kebijakan-konten.md` — ambang **18 tahun**,
+hanya rating Erotika, verifikasi tanggal lahir berlaku 30 hari, dan
+pornografi tidak pernah diminta.
 
 Aplikasi tetap **local-first**: tanpa login, semua fitur baca tetap jalan.
 

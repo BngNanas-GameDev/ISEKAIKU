@@ -56,12 +56,10 @@ void main() {
       ]);
     });
 
-    test('mode 18+ menyertakan erotika dan dewasa', () {
+    test('mode 18+ hanya menambah erotika, bukan pornografi', () {
       final ratings = MangaDexApi.contentRatings(adult: true);
-      expect(
-        ratings,
-        containsAll(<String>['safe', 'suggestive', 'erotica', 'pornographic']),
-      );
+      expect(ratings, containsAll(<String>['safe', 'suggestive', 'erotica']));
+      expect(ratings, isNot(contains('pornographic')));
     });
   });
 }
