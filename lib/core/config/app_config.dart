@@ -8,12 +8,16 @@
 class AppConfig {
   const AppConfig._();
 
+  /// Versi yang ditampilkan di Info aplikasi.
+  static const String appVersion = '1.0.0';
+
   static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 
   /// `anon` key — aman untuk klien karena dilindungi RLS.
   /// Jangan pernah memakai `service_role` di sini.
-  static const String supabaseAnonKey =
-      String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+  );
 
   /// Google OAuth client ID (untuk login Google).
   static const String googleClientId = String.fromEnvironment('ISEKAIKU_CID');
@@ -21,6 +25,5 @@ class AppConfig {
   static bool get hasSupabase =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 
-  static bool get hasGoogle =>
-      hasSupabase && googleClientId.isNotEmpty;
+  static bool get hasGoogle => hasSupabase && googleClientId.isNotEmpty;
 }

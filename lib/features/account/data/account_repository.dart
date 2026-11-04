@@ -16,10 +16,21 @@ class AccountRepository {
     return profiles.isEmpty ? null : profiles.first;
   }
 
-  Future<void> updateBio(String userId, String bio) async {
+  /// Ubah nickname dan bio sekaligus.
+  ///
+  /// Keunikan nickname dijaga index `lower(username)` di server; bentrok
+  /// muncul sebagai error 23505.
+  Future<void> updateProfile({
+    required String userId,
+    required String username,
+    required String bio,
+  }) async {
     await _client
         .from('profiles')
-        .update(<String, dynamic>{'bio': bio.trim()})
+        .update(<String, dynamic>{
+          'username': username.trim(),
+          'bio': bio.trim(),
+        })
         .eq('id', userId);
   }
 

@@ -7,9 +7,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/iseakaiku_wordmark.dart';
+import '../../account/presentation/account_dialog.dart';
+import '../../legal/presentation/about_dialog.dart';
 import '../../library/data/models/library_models.dart';
 import '../../library/library_providers.dart';
+import '../data/models/manga.dart';
 import '../manga_providers.dart';
+import 'adult_content_toggle.dart';
 import 'widgets/manga_card.dart';
 
 class HomePage extends ConsumerWidget {
@@ -19,6 +23,7 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final popular = ref.watch(popularMangaProvider);
     final latest = ref.watch(latestMangaProvider);
+    final bool adult = ref.watch(showAdultContentProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -64,6 +69,51 @@ class HomePage extends ConsumerWidget {
                           color: AppColors.onSurface,
                         ),
                       ),
+                      PopupMenuButton<String>(
+                        tooltip: 'Menu',
+                        icon: const Icon(
+                          Icons.more_vert,
+                          color: AppColors.onSurface,
+                        ),
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'about':
+                              showAboutAppDialog(context);
+                            case 'privacy':
+                              context.push('/legal/privacy');
+                            case 'terms':
+                              context.push('/legal/terms');
+                            case 'adult':
+                              toggleAdultContent(context, ref);
+                            case 'account':
+                              showAccountDialog(context);
+                          }
+                        },
+                        itemBuilder: (context) => <PopupMenuEntry<String>>[
+                          const PopupMenuItem<String>(
+                            value: 'about',
+                            child: Text('Info aplikasi'),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'privacy',
+                            child: Text('Kebijakan Privasi'),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'terms',
+                            child: Text('Syarat Layanan'),
+                          ),
+                          CheckedPopupMenuItem<String>(
+                            value: 'adult',
+                            checked: adult,
+                            child: const Text('Konten 18+'),
+                          ),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem<String>(
+                            value: 'account',
+                            child: Text('Akun & Sinkronisasi'),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -78,23 +128,28 @@ class HomePage extends ConsumerWidget {
               ),
               ...switch (popular) {
                 AsyncData(:final value) when value.isNotEmpty => <Widget>[
-                    MangaGrid(items: value),
-                  ],
+                  _PopularCarousel(items: value),
+                ],
                 AsyncData() => <Widget>[
-                    const SliverToBoxAdapter(
-                      child: _EmptyNote(text: 'Belum ada manga untuk bahasa ini.'),
+                  const SliverToBoxAdapter(
+                    child: _EmptyNote(
+                      text: 'Belum ada manga untuk bahasa ini.',
                     ),
-                  ],
+                  ),
+                ],
                 AsyncError(:final error) => <Widget>[
-                    SliverToBoxAdapter(
-                      child: ErrorRetry(
-                        error: error,
-                        onRetry: () => ref.invalidate(popularMangaProvider),
-                      ),
+                  SliverToBoxAdapter(
+                    child: ErrorRetry(
+                      error: error,
+                      onRetry: () => ref.invalidate(popularMangaProvider),
                     ),
-                  ],
+                  ),
+                ],
                 _ => <Widget>[const _LoadingSliver()],
               },
+
+              // ---------------- Donate ----------------
+              const SliverToBoxAdapter(child: _DonateBanner()),
 
               // ---------------- Terbaru ----------------
               _SectionHeader(
@@ -103,32 +158,20 @@ class HomePage extends ConsumerWidget {
               ),
               ...switch (latest) {
                 AsyncData(:final value) when value.isNotEmpty => <Widget>[
-                    MangaGrid(items: value),
-                  ],
+                  MangaGrid(items: value),
+                ],
                 AsyncData() => <Widget>[
-                    const SliverToBoxAdapter(
-                      child: _EmptyNote(text: 'Tidak ada update terbaru.'),
-                    ),
-                  ],
+                  const SliverToBoxAdapter(
+                    child: _EmptyNote(text: 'Tidak ada update terbaru.'),
+                  ),
+                ],
                 AsyncError() => <Widget>[
-                    SliverToBoxAdapter(
-                      child: _EmptyNote(
-                        text: 'Gagal memuat update terbaru.',
-                      ),
-                    ),
-                  ],
+                  SliverToBoxAdapter(
+                    child: _EmptyNote(text: 'Gagal memuat update terbaru.'),
+                  ),
+                ],
                 _ => <Widget>[const _LoadingSliver()],
               },
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.xxl),
-                  child: Text(
-                    'Sumber data: MangaDex',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.labelSmall,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -249,8 +292,9 @@ class _ContinueReadingCard extends ConsumerWidget {
                     children: <Widget>[
                       Text(
                         'Lanjut baca',
-                        style: AppTypography.labelSmall
-                            .copyWith(color: AppColors.primary),
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.primary,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -286,10 +330,7 @@ class _ContinueReadingCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s),
-                const Icon(
-                  Icons.play_arrow_rounded,
-                  color: AppColors.primary,
-                ),
+                const Icon(Icons.play_arrow_rounded, color: AppColors.primary),
               ],
             ),
           ),
@@ -341,6 +382,227 @@ class _ContinueCover extends StatelessWidget {
                     const ColoredBox(color: AppColors.surfaceContainerHigh),
                 errorWidget: (context, url, error) => fallback,
               ),
+      ),
+    );
+  }
+}
+
+/// Carousel horizontal untuk blok "Populer".
+class _PopularCarousel extends StatefulWidget {
+  const _PopularCarousel({required this.items});
+
+  final List<Manga> items;
+
+  @override
+  State<_PopularCarousel> createState() => _PopularCarouselState();
+}
+
+class _PopularCarouselState extends State<_PopularCarousel> {
+  late final PageController _controller = PageController(
+    viewportFraction: 0.76,
+  );
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.items;
+
+    return SliverToBoxAdapter(
+      child: Column(
+        children: <Widget>[
+          SizedBox(
+            height: 300,
+            child: PageView.builder(
+              controller: _controller,
+              padEnds: false,
+              itemCount: items.length,
+              onPageChanged: (index) => setState(() => _page = index),
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: EdgeInsets.only(
+                    left: index == 0 ? AppSpacing.l : AppSpacing.s,
+                    right: AppSpacing.s,
+                  ),
+                  child: _PopularCard(manga: items[index]),
+                );
+              },
+            ),
+          ),
+          if (items.length > 1) ...<Widget>[
+            const SizedBox(height: AppSpacing.s),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                for (var i = 0; i < items.length; i++)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    width: i == _page ? 14 : 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: i == _page
+                          ? AppColors.primary
+                          : AppColors.outlineVariant,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PopularCard extends StatelessWidget {
+  const _PopularCard({required this.manga});
+
+  final Manga manga;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool adult =
+        manga.contentRating == 'erotica' ||
+        manga.contentRating == 'pornographic';
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.l),
+      onTap: () => context.push('/manga/${manga.id}'),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.l),
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            if (manga.coverUrl != null)
+              CachedNetworkImage(
+                imageUrl: manga.coverUrl!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) =>
+                    const ColoredBox(color: AppColors.surfaceContainerHigh),
+                errorWidget: (context, url, error) => const ColoredBox(
+                  color: AppColors.surfaceContainerHigh,
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else
+              const ColoredBox(
+                color: AppColors.surfaceContainerHigh,
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.center,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[Colors.transparent, Color(0xF2222831)],
+                ),
+              ),
+            ),
+            if (adult)
+              Positioned(
+                top: AppSpacing.s,
+                left: AppSpacing.s,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    borderRadius: BorderRadius.circular(AppRadius.s),
+                  ),
+                  child: Text(
+                    '18+',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.background,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              left: AppSpacing.m,
+              right: AppSpacing.m,
+              bottom: AppSpacing.m,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    manga.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.titleMedium,
+                  ),
+                  if (manga.author.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 2),
+                    Text(
+                      manga.author,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Banner dukungan di bawah carousel Populer.
+class _DonateBanner extends StatelessWidget {
+  const _DonateBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.xs,
+        AppSpacing.l,
+        AppSpacing.l,
+      ),
+      child: Semantics(
+        button: true,
+        label: 'Dukung Isekaiku',
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.l),
+          onTap: () => context.push('/donate'),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.l),
+            child: AspectRatio(
+              aspectRatio: 2.7,
+              child: Image.asset(
+                'assets/donate/DOnate.webp',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Container(
+                  color: AppColors.surfaceContainer,
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Dukung Isekaiku',
+                    style: AppTypography.labelLarge,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

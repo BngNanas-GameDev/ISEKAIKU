@@ -93,6 +93,8 @@ flutter:
     - assets/Beranda/
     - assets/Cari/
     - assets/Pustaka/
+    - assets/Forum/
+    - assets/Profil/
 
 # --- Ikon launcher & splash -------------------------------------------------
 # Jalankan ulang setelah mengganti gambar:

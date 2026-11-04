@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/config/app_config.dart';
@@ -16,6 +17,7 @@ import '../../legal/legal_content.dart';
 import '../../legal/presentation/legal_pages.dart';
 import '../account_providers.dart';
 import '../data/models/profile_models.dart';
+import '../data/profile_validation.dart';
 import 'account_dialog.dart';
 
 /// Tab Akun: profil, statistik, dan aktivitas forum.
@@ -157,9 +159,9 @@ class _ProfileView extends ConsumerWidget {
                             horizontal: AppSpacing.m,
                           ),
                         ),
-                        onPressed: () => _editBio(context, ref, bio),
+                        onPressed: () => _editProfile(context, ref, name, bio),
                         icon: const Icon(Icons.edit_outlined, size: 16),
-                        label: const Text('Edit bio'),
+                        label: const Text('Edit profil'),
                       ),
                     ],
                   ),
@@ -297,6 +299,29 @@ class _ProfileView extends ConsumerWidget {
             ),
             onTap: () => context.push('/legal/privacy'),
           ),
+          ListTile(
+            leading: const Icon(
+              Icons.public,
+              color: AppColors.onSurfaceVariant,
+            ),
+            title: Text(
+              'Sumber data: MangaDex',
+              style: AppTypography.bodyMedium,
+            ),
+            subtitle: Text(
+              'mangadex.org • penggunaan non-komersial',
+              style: AppTypography.labelSmall,
+            ),
+            trailing: const Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: AppColors.onSurfaceVariant,
+            ),
+            onTap: () => launchUrl(
+              Uri.parse('https://mangadex.org'),
+              mode: LaunchMode.externalApplication,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.l,
@@ -312,31 +337,26 @@ class _ProfileView extends ConsumerWidget {
     );
   }
 
-  Future<void> _editBio(
+  Future<void> _editProfile(
     BuildContext context,
     WidgetRef ref,
-    String current,
+    String name,
+    String bio,
   ) async {
-    final String? bio = await showDialog<String>(
+    final bool? saved = await showDialog<bool>(
       context: context,
-      builder: (context) => _EditBioDialog(initial: current),
+      builder: (context) =>
+          _EditProfileDialog(initialName: name, initialBio: bio),
     );
-    if (bio == null) return;
+    if (saved != true) return;
 
-    final String? userId = ref.read(currentUserProvider)?.id;
-    if (userId == null) return;
-
-    try {
-      await ref.read(accountRepositoryProvider).updateBio(userId, bio);
-      ref.invalidate(currentProfileProvider);
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Bio gagal disimpan. Coba lagi.')),
-        );
-    }
+    ref.invalidate(currentProfileProvider);
+    // Nama penulis ikut berubah di forum.
+    ref.invalidate(forumThreadsProvider);
+    ref.invalidate(forumThreadProvider);
+    ref.invalidate(myForumThreadsProvider);
+    ref.invalidate(followersProvider);
+    ref.invalidate(followingProvider);
   }
 
   void _showFollowList(
@@ -443,49 +463,134 @@ class _Stat extends StatelessWidget {
   }
 }
 
-class _EditBioDialog extends StatefulWidget {
-  const _EditBioDialog({required this.initial});
+class _EditProfileDialog extends ConsumerStatefulWidget {
+  const _EditProfileDialog({
+    required this.initialName,
+    required this.initialBio,
+  });
 
-  final String initial;
+  final String initialName;
+  final String initialBio;
 
   @override
-  State<_EditBioDialog> createState() => _EditBioDialogState();
+  ConsumerState<_EditProfileDialog> createState() => _EditProfileDialogState();
 }
 
-class _EditBioDialogState extends State<_EditBioDialog> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initial,
+class _EditProfileDialogState extends ConsumerState<_EditProfileDialog> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.initialName,
   );
+  late final TextEditingController _bio = TextEditingController(
+    text: widget.initialBio,
+  );
+
+  String? _nameError;
+  String? _bioError;
+  String? _error;
+  bool _saving = false;
 
   @override
   void dispose() {
-    _controller.dispose();
+    _name.dispose();
+    _bio.dispose();
     super.dispose();
+  }
+
+  Future<void> _save() async {
+    final String? nameError = ProfileValidation.usernameError(_name.text);
+    final String? bioError = ProfileValidation.bioError(_bio.text);
+
+    setState(() {
+      _nameError = nameError;
+      _bioError = bioError;
+      _error = null;
+    });
+    if (nameError != null || bioError != null) return;
+
+    final String? userId = ref.read(currentUserProvider)?.id;
+    if (userId == null) {
+      setState(() => _error = 'Sesi login berakhir.');
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(accountRepositoryProvider)
+          .updateProfile(userId: userId, username: _name.text, bio: _bio.text);
+      if (mounted) Navigator.of(context).pop(true);
+    } on PostgrestException catch (error) {
+      setState(() {
+        _saving = false;
+        _error = switch (error.code) {
+          '23505' => 'Nama itu sudah dipakai. Pilih nama lain.',
+          '23514' => 'Nama tidak memenuhi aturan. Coba nama lain.',
+          _ => error.message,
+        };
+      });
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = 'Tidak bisa menyimpan. Periksa koneksi.';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Edit bio', style: AppTypography.titleMedium),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        minLines: 3,
-        maxLines: 5,
-        maxLength: 160,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: const InputDecoration(
-          hintText: 'Ceritakan manga favoritmu…',
+      backgroundColor: AppColors.surfaceContainer,
+      title: const Text('Edit profil', style: AppTypography.titleMedium),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            TextField(
+              controller: _name,
+              autofocus: true,
+              maxLength: ProfileValidation.usernameMax,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: 'Nama tampilan',
+                hintText: 'Mis. Budi Santoso',
+                errorText: _nameError,
+                helperText: 'Tampil di forum dan profil.',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s),
+            TextField(
+              controller: _bio,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: ProfileValidation.bioMax,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: 'Bio',
+                hintText: 'Ceritakan manga favoritmu…',
+                errorText: _bioError,
+              ),
+            ),
+            if (_error != null) ...<Widget>[
+              const SizedBox(height: AppSpacing.s),
+              Text(
+                _error!,
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.error,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
       actions: <Widget>[
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _saving ? null : () => Navigator.of(context).pop(false),
           child: const Text('Batal'),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: const Text('Simpan'),
+          onPressed: _saving ? null : _save,
+          child: Text(_saving ? 'Menyimpan…' : 'Simpan'),
         ),
       ],
     );
@@ -615,6 +720,24 @@ class _SignedOutView extends StatelessWidget {
           ),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (context) => const PrivacyPage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.public, color: AppColors.onSurfaceVariant),
+          title: Text('Sumber data: MangaDex', style: AppTypography.bodyMedium),
+          subtitle: Text(
+            'mangadex.org • penggunaan non-komersial',
+            style: AppTypography.labelSmall,
+          ),
+          trailing: const Icon(
+            Icons.open_in_new,
+            size: 16,
+            color: AppColors.onSurfaceVariant,
+          ),
+          onTap: () => launchUrl(
+            Uri.parse('https://mangadex.org'),
+            mode: LaunchMode.externalApplication,
           ),
         ),
       ],

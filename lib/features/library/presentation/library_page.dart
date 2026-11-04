@@ -11,9 +11,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../account/presentation/account_dialog.dart';
-import '../../account/account_providers.dart';
-import '../../manga/data/adult_policy.dart';
 import '../../manga/manga_providers.dart';
+import '../../manga/presentation/adult_content_toggle.dart';
 import '../../manga/presentation/widgets/manga_card.dart';
 import '../data/library_backup.dart';
 import '../data/models/library_models.dart';
@@ -177,138 +176,8 @@ class LibraryPage extends ConsumerWidget {
   }
 
   /// Nyalakan/matikan judul rating erotika (18+).
-  ///
-  /// Kebijakan: hanya `erotica` yang bisa dibuka, `pornographic` selalu
-  /// ditolak. Mengaktifkan wajib melewati verifikasi tanggal lahir.
-  Future<void> _toggleAdult(BuildContext context, WidgetRef ref) async {
-    final bool active = ref.read(showAdultContentProvider);
-    if (active) {
-      ref.read(showAdultContentProvider.notifier).disable();
-      _invalidateCatalog(ref);
-      return;
-    }
-
-    // Konten 18+ wajib akun: tanpa login, pemeriksaan usia tidak bisa
-    // dipertanggungjawabkan.
-    if (ref.read(currentUserProvider) == null) {
-      final bool signedIn = await _promptAdultLogin(context, ref);
-      if (!signedIn || !context.mounted) return;
-    }
-
-    final profile = await ref.read(currentProfileProvider.future);
-    if (!context.mounted) return;
-
-    final DateTime? birthDate = profile?.birthDate;
-
-    if (birthDate == null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Lengkapi tanggal lahir di Profil terlebih dahulu.'),
-          ),
-        );
-      return;
-    }
-
-    if (!AdultPolicy.isAdult(birthDate)) {
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: AppColors.surfaceContainer,
-          title: const Text('Belum tersedia', style: AppTypography.titleMedium),
-          content: const Text(
-            'Fitur ini belum tersedia untuk usia kamu.',
-            style: AppTypography.bodySmall,
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Mengerti'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainer,
-        title: const Text(
-          'Aktifkan konten 18+?',
-          style: AppTypography.titleMedium,
-        ),
-        content: const Text(
-          'Judul dengan rating Erotika akan muncul di Beranda, Jelajah, dan '
-          'Pencarian. Rating pornografi tetap tidak disediakan.',
-          style: AppTypography.bodySmall,
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Aktifkan'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-
-    ref.read(showAdultContentProvider.notifier).enable();
-    _invalidateCatalog(ref);
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Konten 18+ diaktifkan.')));
-  }
-
-  void _invalidateCatalog(WidgetRef ref) {
-    ref.invalidate(popularMangaProvider);
-    ref.invalidate(latestMangaProvider);
-    ref.invalidate(browseResultsProvider);
-  }
-
-  /// Minta login sebelum konten 18+ bisa diaktifkan.
-  Future<bool> _promptAdultLogin(BuildContext context, WidgetRef ref) async {
-    final bool? proceed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainer,
-        title: const Text(
-          'Masuk untuk konten 18+',
-          style: AppTypography.titleMedium,
-        ),
-        content: const Text(
-          'Konten Erotika hanya tersedia untuk pengguna yang masuk dengan '
-          'Google dan sudah diverifikasi berusia 18 tahun ke atas. '
-          'Setelah masuk, kamu akan diminta mengisi tanggal lahir.\n\n'
-          'Dengan melanjutkan, kamu menyetujui Syarat Layanan dan '
-          'Kebijakan Privasi.',
-          style: AppTypography.bodySmall,
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Masuk'),
-          ),
-        ],
-      ),
-    );
-
-    if (proceed != true || !context.mounted) return false;
-
-    await showAccountDialog(context);
-    if (!context.mounted) return false;
-    return ref.read(currentUserProvider) != null;
+  Future<void> _toggleAdult(BuildContext context, WidgetRef ref) {
+    return toggleAdultContent(context, ref);
   }
 
   Future<void> _export(BuildContext context, WidgetRef ref) async {

@@ -88,13 +88,23 @@ class ShellPage extends StatelessWidget {
                 label: 'Pustaka',
               ),
               NavigationDestination(
-                icon: Icon(Icons.forum_outlined),
-                selectedIcon: Icon(Icons.forum, color: AppColors.primary),
+                icon: _AnimatedAssetIcon(
+                  frames: <String>['assets/Forum/F1.png'],
+                ),
+                selectedIcon: _AnimatedAssetIcon(
+                  frames: <String>['assets/Forum/F1.png'],
+                  selected: true,
+                ),
                 label: 'Forum',
               ),
               NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person, color: AppColors.primary),
+                icon: _AnimatedAssetIcon(
+                  frames: <String>['assets/Profil/a1.png'],
+                ),
+                selectedIcon: _AnimatedAssetIcon(
+                  frames: <String>['assets/Profil/a1.png'],
+                  selected: true,
+                ),
                 label: 'Akun',
               ),
             ],
