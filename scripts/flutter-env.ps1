@@ -60,7 +60,6 @@ $mapping = [ordered]@{
   "URL"          = "SUPABASE_URL"
   "ANON_KEY"     = "SUPABASE_ANON_KEY"
   "ISEKAIKU_CID" = "ISEKAIKU_CID"
-  "SAWERIA_STREAM_KEY" = "SAWERIA_STREAM_KEY"
 }
 
 $defines = @()
