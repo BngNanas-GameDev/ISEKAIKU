@@ -64,6 +64,8 @@ class LibraryPage extends ConsumerWidget {
                   ref.read(librarySortProvider.notifier).set(LibrarySort.newest);
                 } else if (value == 'sort_title') {
                   ref.read(librarySortProvider.notifier).set(LibrarySort.titleAz);
+                } else if (value == 'donate') {
+                  context.push('/donate');
                 }
               },
               itemBuilder: (context) => <PopupMenuEntry<String>>[
@@ -100,6 +102,11 @@ class LibraryPage extends ConsumerWidget {
                     child: Text('Akun & sinkronisasi'),
                   ),
                 ],
+                const PopupMenuDivider(),
+                const PopupMenuItem<String>(
+                  value: 'donate',
+                  child: Text('Dukung Isekaiku'),
+                ),
               ],
             ),
           ],

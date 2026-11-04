@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/iseakaiku_wordmark.dart';
+import '../../features/donate/presentation/donate_page.dart';
 import '../../features/library/presentation/library_page.dart';
 import '../../features/manga/presentation/browse_page.dart';
 import '../../features/manga/presentation/home_page.dart';
@@ -59,6 +60,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/dev/design',
       builder: (context, state) => const IsekaikuDesignSystemPreview(),
+    ),
+    GoRoute(
+      path: '/donate',
+      builder: (context, state) => const DonatePage(),
     ),
   ],
 );

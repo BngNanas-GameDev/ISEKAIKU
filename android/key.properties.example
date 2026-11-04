@@ -1,0 +1,10 @@
+# Contoh kredensial rilis. Salin menjadi `android/key.properties` lalu isi.
+# Berkas `key.properties` dan `*.jks` TIDAK di-commit (lihat .gitignore).
+#
+# Buat keystore dengan:  .\scripts\make-keystore.ps1
+#
+# storeFile relatif terhadap folder android/app
+storeFile=release-keystore.jks
+storePassword=GANTI_DENGAN_PASSWORD
+keyAlias=isekaiku
+keyPassword=GANTI_DENGAN_PASSWORD

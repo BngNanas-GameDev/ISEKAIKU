@@ -88,20 +88,27 @@ flutter:
   assets:
     - assets/fonts/LICENSE-Asimov.txt
     - assets/fonts/NOTICE-Asimov.txt
+    - assets/donate/
+    - assets/icon/
 
-# TODO (M5): tambahkan assets/images/splash_logo.png dan
-# assets/images/icon_launcher.png, lalu uncomment bagian bawah dan jalankan:
-#   flutter pub run flutter_native_splash:create
-#   flutter pub run flutter_launcher_icons:create
-#
-# flutter_native_splash:
-#   color: "#222831"
-#   image: assets/images/splash_logo.png
-#   android: true
-#   web: false
-#
-# flutter_icons:
-#   android: true
-#   ios: false
-#   remove_alpha_ios: true
-#   image_path: assets/images/icon_launcher.png
+# --- Ikon launcher & splash -------------------------------------------------
+# Jalankan ulang setelah mengganti gambar:
+#   dart run flutter_launcher_icons
+#   dart run flutter_native_splash:create
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/asset-gen-424ee9ea-858d-4f46-b9ea-c7ad2aea39ed-0_0-removebg-preview.png"
+  adaptive_icon_background: "#222831"
+  adaptive_icon_foreground: "assets/icon/asset-gen-424ee9ea-858d-4f46-b9ea-c7ad2aea39ed-0_0-removebg-preview.png"
+  min_sdk_android: 24
+
+flutter_native_splash:
+  color: "#222831"
+  image: "assets/icon/asset-gen-424ee9ea-858d-4f46-b9ea-c7ad2aea39ed-0_0-removebg-preview.png"
+  android: true
+  web: false
+  android_12:
+    color: "#222831"
+    image: "assets/icon/asset-gen-424ee9ea-858d-4f46-b9ea-c7ad2aea39ed-0_0-removebg-preview.png"
