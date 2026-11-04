@@ -14,7 +14,7 @@ Future<void> showAccountDialog(BuildContext context) {
   );
 }
 
-/// Dialog akun: masuk/daftar, atau status akun + keluar.
+/// Dialog akun: masuk dengan Google, atau status akun + keluar.
 class AccountDialog extends ConsumerStatefulWidget {
   const AccountDialog({super.key});
 
@@ -23,54 +23,24 @@ class AccountDialog extends ConsumerStatefulWidget {
 }
 
 class _AccountDialogState extends ConsumerState<AccountDialog> {
-  final TextEditingController _email = TextEditingController();
-  final TextEditingController _password = TextEditingController();
-
   bool _loading = false;
-  bool _signUp = false;
   String? _error;
 
-  @override
-  void dispose() {
-    _email.dispose();
-    _password.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final email = _email.text.trim();
-    final password = _password.text;
-
-    if (email.isEmpty || password.length < 6) {
-      setState(() => _error = 'Email wajib diisi dan password minimal 6 karakter.');
-      return;
-    }
-
+  Future<void> _signInWithGoogle() async {
     setState(() {
       _loading = true;
       _error = null;
     });
 
-    final auth = ref.read(authServiceProvider);
     try {
-      if (_signUp) {
-        await auth.signUp(email: email, password: password);
-      } else {
-        await auth.signIn(email: email, password: password);
+      final launched = await ref.read(authServiceProvider).signInWithGoogle();
+      if (!launched && mounted) {
+        setState(() => _error = 'Tidak bisa membuka halaman login Google.');
       }
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(_signUp ? 'Akun dibuat.' : 'Berhasil masuk.'),
-          ),
-        );
     } on AuthException catch (error) {
-      setState(() => _error = error.message);
+      if (mounted) setState(() => _error = error.message);
     } catch (_) {
-      setState(() => _error = 'Tidak bisa terhubung ke server.');
+      if (mounted) setState(() => _error = 'Tidak bisa terhubung ke server.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -96,45 +66,37 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
       ),
       content: SizedBox(
         width: 380,
-        child: user == null ? _buildForm() : _buildSignedIn(user),
+        child: user == null ? _buildSignedOut() : _buildSignedIn(user),
       ),
-      actions: user == null ? _buildFormActions() : _buildSignedInActions(),
+      actions: user == null ? _buildSignedOutActions() : _buildSignedInActions(),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildSignedOut() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Akun dipakai untuk menyinkronkan Pustaka antar perangkat. '
-          'Tanpa akun, semua fitur baca tetap berjalan.',
+          'Masuk dengan Google untuk menyinkronkan Pustaka dan riwayat baca '
+          'antar perangkat. Tanpa akun, semua fitur baca tetap berjalan.',
           style: AppTypography.bodySmall.copyWith(
             color: AppColors.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: AppSpacing.l),
-        TextField(
-          controller: _email,
-          keyboardType: TextInputType.emailAddress,
-          autofillHints: const <String>[AutofillHints.email],
-          style: AppTypography.bodyMedium,
-          decoration: const InputDecoration(
-            labelText: 'Email',
-            prefixIcon: Icon(Icons.alternate_email, size: 18),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.m),
-        TextField(
-          controller: _password,
-          obscureText: true,
-          autofillHints: const <String>[AutofillHints.password],
-          style: AppTypography.bodyMedium,
-          onSubmitted: (_) => _loading ? null : _submit(),
-          decoration: const InputDecoration(
-            labelText: 'Password',
-            prefixIcon: Icon(Icons.lock_outline, size: 18),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _loading ? null : _signInWithGoogle,
+            icon: _loading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.account_circle_outlined, size: 18),
+            label: Text(_loading ? 'Membuka…' : 'Masuk dengan Google'),
           ),
         ),
         if (_error != null) ...<Widget>[
@@ -159,7 +121,7 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
         ),
         const SizedBox(height: AppSpacing.s),
         Text(
-          'Sinkronisasi akan tersedia pada langkah berikutnya.',
+          'Pustaka akan disinkronkan otomatis setiap kali kamu masuk.',
           style: AppTypography.labelSmall.copyWith(
             color: AppColors.onSurfaceVariant,
           ),
@@ -168,26 +130,11 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
     );
   }
 
-  List<Widget> _buildFormActions() {
+  List<Widget> _buildSignedOutActions() {
     return <Widget>[
       TextButton(
-        onPressed: _loading
-            ? null
-            : () => setState(() {
-                  _signUp = !_signUp;
-                  _error = null;
-                }),
-        child: Text(_signUp ? 'Sudah punya akun?' : 'Buat akun baru'),
-      ),
-      FilledButton(
-        onPressed: _loading ? null : _submit,
-        child: _loading
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Text(_signUp ? 'Daftar' : 'Masuk'),
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Tutup'),
       ),
     ];
   }

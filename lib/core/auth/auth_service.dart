@@ -7,6 +7,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AuthService {
   AuthService(this._client);
 
+  /// Harus sama dengan intent-filter AndroidManifest dan Redirect URLs
+  /// di dashboard Supabase.
+  static const String authRedirect =
+      'com.isekaiku.isekaiku://auth-callback';
+
   final SupabaseClient _client;
 
   User? get user => _client.auth.currentUser;
@@ -15,17 +20,14 @@ class AuthService {
 
   Stream<AuthState> get changes => _client.auth.onAuthStateChange;
 
-  Future<void> signIn({required String email, required String password}) async {
-    await _client.auth.signInWithPassword(
-      email: email.trim(),
-      password: password,
-    );
-  }
-
-  Future<void> signUp({required String email, required String password}) async {
-    await _client.auth.signUp(
-      email: email.trim(),
-      password: password,
+  /// Buka halaman login Google di browser eksternal.
+  ///
+  /// Hasil sebenarnya muncul lewat [changes]/`authStateProvider` setelah
+  /// aplikasi kembali dari deep link.
+  Future<bool> signInWithGoogle() {
+    return _client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: authRedirect,
     );
   }
 

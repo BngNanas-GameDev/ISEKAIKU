@@ -52,13 +52,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     _currentPage = widget.initialPage > 0 ? widget.initialPage - 1 : 0;
     _pageController = PageController(initialPage: _currentPage);
 
-    // Tandai chapter ini sudah dibaca, lalu catat riwayat setelah frame
-    // pertama supaya tidak menahan render.
-    ref
-        .read(readChaptersProvider.notifier)
-        .markRead(widget.mangaId, widget.chapterId);
+    // Modifikasi provider TIDAK boleh dilakukan saat initState (widget tree
+    // sedang dibangun), jadi ditunda sampai frame pertama selesai.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref
+          .read(readChaptersProvider.notifier)
+          .markRead(widget.mangaId, widget.chapterId);
       _saveProgress(
         page: widget.initialPage > 0 ? widget.initialPage : 1,
         total: _totalPages,
