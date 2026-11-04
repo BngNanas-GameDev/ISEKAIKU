@@ -199,7 +199,26 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTap: () => setState(() => _chromeVisible = !_chromeVisible),
+            onTapUp: (details) {
+              // Webtoon: tidak ada konsep halaman, cukup toggle chrome.
+              if (webtoon) {
+                setState(() => _chromeVisible = !_chromeVisible);
+                return;
+              }
+
+              final double width = MediaQuery.sizeOf(context).width;
+              final double dx = details.localPosition.dx;
+
+              // Ketuk kiri = halaman sebelumnya, kanan = berikutnya,
+              // tengah = tampilkan/sembunyikan kontrol.
+              if (dx < width * 0.3) {
+                _goToPage(_currentPage - 1);
+              } else if (dx > width * 0.7) {
+                _goToPage(_currentPage + 1);
+              } else {
+                setState(() => _chromeVisible = !_chromeVisible);
+              }
+            },
             child: webtoon
                 ? ListView.builder(
                     itemCount: urls.length,
@@ -249,6 +268,17 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     return 'Reader';
   }
 
+  /// Pindah halaman dengan animasi singkat (dipakai tap kiri/kanan).
+  void _goToPage(int index) {
+    if (_totalPages <= 0) return;
+    if (index < 0 || index >= _totalPages) return;
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
+  }
+
   /// Prefetch 2 halaman berikutnya agar geser terasa mulus.
   void _prefetch(List<String> urls, int index) {
     for (var i = index + 1; i <= index + 2 && i < urls.length; i++) {
@@ -260,6 +290,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surfaceContainer,
+      useSafeArea: true,
+      isScrollControlled: true,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.l)),
       ),
@@ -267,12 +300,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         builder: (context, ref, _) {
           final webtoon = ref.watch(webtoonModeProvider);
           final saver = ref.watch(dataSaverProvider);
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(
+          return SingleChildScrollView(
+            // Bisa digulir + padding bawah mengikuti navigation bar Android,
+            // supaya switch terakhir dan petunjuk tidak tertutup.
+            padding: EdgeInsets.fromLTRB(
               AppSpacing.l,
+              AppSpacing.s,
               AppSpacing.l,
-              AppSpacing.l,
-              AppSpacing.xxl,
+              AppSpacing.xxl + MediaQuery.viewPaddingOf(context).bottom,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -303,6 +338,16 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                   activeThumbColor: AppColors.primary,
                   onChanged: (value) =>
                       ref.read(dataSaverProvider.notifier).set(value),
+                ),
+                const Divider(),
+                const SizedBox(height: AppSpacing.s),
+                Text(
+                  'Navigasi halaman: ketuk sisi kanan untuk halaman berikutnya, '
+                  'sisi kiri untuk halaman sebelumnya, ketuk tengah untuk '
+                  'menampilkan/menyembunyikan kontrol.',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
