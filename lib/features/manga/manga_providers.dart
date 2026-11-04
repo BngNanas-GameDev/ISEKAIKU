@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/auth/auth_providers.dart';
 import '../../core/storage/storage_providers.dart';
 import '../../core/storage/storage_service.dart';
+import '../account/account_providers.dart';
+import 'data/adult_policy.dart';
 import 'data/chapter_availability.dart';
 import 'data/mangadex_api.dart';
 import 'data/models/manga.dart';
@@ -52,50 +55,33 @@ final dataSaverProvider = StateNotifierProvider<PersistentBoolNotifier, bool>((
 /// Kebijakan:
 /// - Nonaktif secara bawaan.
 /// - Hanya rating `erotica` yang dibuka; `pornographic` **selalu** ditolak.
-/// - Verifikasi usia berlaku 30 hari, lalu wajib diverifikasi ulang.
-/// - Tanggal lahir tidak disimpan; hanya status verifikasi + waktunya.
+/// - Syarat: sudah login dan tanggal lahir (sekali isi) berusia 18+.
+/// - Tidak ada masa berlaku: usia dihitung ulang dari tanggal lahir.
 const String catalogAdultKey = 'catalog.showAdult';
-const String catalogAdultSinceKey = 'catalog.adultSince';
 
-/// Verifikasi usia kedaluwarsa setelah 30 hari.
-const Duration adultVerificationTtl = Duration(days: 30);
+/// Kunci lama (verifikasi 30 hari) — dibersihkan otomatis.
+const String _legacyAdultSinceKey = 'catalog.adultSince';
 
 class AdultContentNotifier extends StateNotifier<bool> {
-  AdultContentNotifier(this._storage) : super(_stillValid(_storage)) {
-    // Bersihkan flag lama yang sudah kedaluwarsa/tidak lengkap.
-    if (!state && _storage.getBool(catalogAdultKey, fallback: false)) {
-      _storage.setBool(catalogAdultKey, false);
-      _storage.remove(catalogAdultSinceKey);
+  AdultContentNotifier(this._storage)
+    : super(_storage.getBool(catalogAdultKey, fallback: false)) {
+    // Versi lama menyimpan cap waktu; sekarang tidak dipakai lagi.
+    if (_storage.getString(_legacyAdultSinceKey).isNotEmpty) {
+      _storage.remove(_legacyAdultSinceKey);
     }
   }
 
   final StorageService _storage;
 
-  static bool _stillValid(StorageService storage) {
-    if (!storage.getBool(catalogAdultKey, fallback: false)) return false;
-
-    final DateTime? since = DateTime.tryParse(
-      storage.getString(catalogAdultSinceKey),
-    );
-    if (since == null) return false;
-
-    final Duration age = DateTime.now().difference(since);
-    if (age.isNegative || age > adultVerificationTtl) return false;
-    return true;
-  }
-
-  /// Aktifkan setelah gerbang tanggal lahir lolos.
+  /// Aktifkan setelah tanggal lahir memenuhi syarat.
   void enable() {
-    final DateTime now = DateTime.now();
     _storage.setBool(catalogAdultKey, true);
-    _storage.setString(catalogAdultSinceKey, now.toUtc().toIso8601String());
     state = true;
   }
 
-  /// Matikan dan hapus bukti verifikasi.
+  /// Matikan kapan saja.
   void disable() {
     _storage.setBool(catalogAdultKey, false);
-    _storage.remove(catalogAdultSinceKey);
     state = false;
   }
 }
@@ -104,6 +90,20 @@ final showAdultContentProvider =
     StateNotifierProvider<AdultContentNotifier, bool>((ref) {
       return AdultContentNotifier(ref.watch(storageServiceProvider));
     });
+
+/// Konten 18+ hanya efektif bila sudah login dan tanggal lahir ≥ 18 tahun.
+///
+/// Status tidak punya masa berlaku: selama tanggal lahir memenuhi syarat,
+/// akses tetap berlaku tanpa isi ulang.
+final adultContentEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(showAdultContentProvider)) return false;
+  if (ref.watch(currentUserProvider) == null) return false;
+
+  final birthDate = ref.watch(currentProfileProvider).valueOrNull?.birthDate;
+  if (birthDate == null) return false;
+
+  return AdultPolicy.isAdult(birthDate);
+});
 
 /// Mode reader: true = webtoon (scroll vertikal), false = paged.
 final webtoonModeProvider = StateNotifierProvider<PersistentBoolNotifier, bool>(
@@ -124,7 +124,7 @@ final popularMangaProvider = FutureProvider.autoDispose<List<Manga>>((
   ref,
 ) async {
   final language = ref.watch(chapterLanguageProvider);
-  final adult = ref.watch(showAdultContentProvider);
+  final adult = ref.watch(adultContentEnabledProvider);
   final list = await ref
       .watch(mangaDexApiProvider)
       .popular(limit: 20, language: language, adult: adult);
@@ -138,7 +138,7 @@ final latestMangaProvider = FutureProvider.autoDispose<List<Manga>>((
   ref,
 ) async {
   final language = ref.watch(chapterLanguageProvider);
-  final adult = ref.watch(showAdultContentProvider);
+  final adult = ref.watch(adultContentEnabledProvider);
   final list = await ref
       .watch(mangaDexApiProvider)
       .latest(limit: 20, language: language, adult: adult);
@@ -157,7 +157,7 @@ final mangaDetailProvider = FutureProvider.autoDispose.family<Manga, String>((
 final chapterListProvider = FutureProvider.autoDispose
     .family<List<Chapter>, String>((ref, mangaId) {
       final language = ref.watch(chapterLanguageProvider);
-      final adult = ref.watch(showAdultContentProvider);
+      final adult = ref.watch(adultContentEnabledProvider);
       return ref
           .watch(mangaDexApiProvider)
           .chapters(mangaId, language: language, adult: adult);
@@ -176,7 +176,7 @@ final chapterPagesProvider = FutureProvider.autoDispose
 final searchResultsProvider = FutureProvider.autoDispose
     .family<List<Manga>, String>((ref, query) async {
       if (query.trim().isEmpty) return <Manga>[];
-      final adult = ref.watch(showAdultContentProvider);
+      final adult = ref.watch(adultContentEnabledProvider);
       return ref.watch(mangaDexApiProvider).search(query.trim(), adult: adult);
     });
 
@@ -275,7 +275,7 @@ final browseResultsProvider = FutureProvider.autoDispose<List<Manga>>((
 ) async {
   final filter = ref.watch(browseFilterProvider);
   final language = ref.watch(chapterLanguageProvider);
-  final adult = ref.watch(showAdultContentProvider);
+  final adult = ref.watch(adultContentEnabledProvider);
 
   final order = switch (filter.order) {
     BrowseOrder.popular => 'followedCount',

@@ -122,7 +122,8 @@ lib/
     manga/                # M1: browse, search, detail, reader
     library/              # M2: Pustaka (diikuti + riwayat), model & store lokal
     forum/                # M7: forum komunitas (topik, balasan, laporan)
-    account/              # dialog akun Google
+    account/              # dialog akun Google + tab profil
+    legal/                # Syarat Layanan, Kebijakan Privasi, onboarding
     donate/               # halaman dukungan
   sources/                # (M3+) VideoSourceProvider
 assets/
@@ -221,6 +222,8 @@ Skema backend opsional ada di:
   `forum_posts`, `forum_reports`) beserta trigger moderasi.
 - `supabase/migrations/0003_profile_social.sql` — bio profil, forward manga
   pada topik, dan `user_follows` (pengikut/mengikuti).
+- `supabase/migrations/0004_birth_date.sql` — tanggal lahir sekali isi
+  (tidak bisa diubah) untuk penyesuaian usia; status 18+ dihitung otomatis.
 
 Semuanya lengkap dengan **RLS** dan **trigger moderasi** server-side.
 

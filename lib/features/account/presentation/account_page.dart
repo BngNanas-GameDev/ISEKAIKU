@@ -12,6 +12,8 @@ import '../../../core/theme/app_typography.dart';
 import '../../forum/data/models/forum_models.dart';
 import '../../forum/forum_providers.dart';
 import '../../forum/presentation/widgets/forum_widgets.dart';
+import '../../legal/legal_content.dart';
+import '../../legal/presentation/legal_pages.dart';
 import '../account_providers.dart';
 import '../data/models/profile_models.dart';
 import 'account_dialog.dart';
@@ -268,6 +270,42 @@ class _ProfileView extends ConsumerWidget {
                   ),
               ];
             },
+          ),
+          const SizedBox(height: AppSpacing.l),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(
+              Icons.description_outlined,
+              color: AppColors.onSurfaceVariant,
+            ),
+            title: Text('Syarat Layanan', style: AppTypography.bodyMedium),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: AppColors.onSurfaceVariant,
+            ),
+            onTap: () => context.push('/legal/terms'),
+          ),
+          ListTile(
+            leading: const Icon(
+              Icons.privacy_tip_outlined,
+              color: AppColors.onSurfaceVariant,
+            ),
+            title: Text('Kebijakan Privasi', style: AppTypography.bodyMedium),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: AppColors.onSurfaceVariant,
+            ),
+            onTap: () => context.push('/legal/privacy'),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.l,
+              vertical: AppSpacing.s,
+            ),
+            child: Text(
+              'Versi dokumen ${LegalContent.version}',
+              style: AppTypography.labelSmall,
+            ),
           ),
         ],
       ),
@@ -546,6 +584,38 @@ class _SignedOutView extends StatelessWidget {
           onPressed: () => showAccountDialog(context),
           icon: const Icon(Icons.login, size: 18),
           label: const Text('Masuk dengan Google'),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        const Divider(),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(
+            Icons.description_outlined,
+            color: AppColors.onSurfaceVariant,
+          ),
+          title: Text('Syarat Layanan', style: AppTypography.bodyMedium),
+          trailing: const Icon(
+            Icons.chevron_right,
+            color: AppColors.onSurfaceVariant,
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (context) => const TermsPage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(
+            Icons.privacy_tip_outlined,
+            color: AppColors.onSurfaceVariant,
+          ),
+          title: Text('Kebijakan Privasi', style: AppTypography.bodyMedium),
+          trailing: const Icon(
+            Icons.chevron_right,
+            color: AppColors.onSurfaceVariant,
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (context) => const PrivacyPage()),
+          ),
         ),
       ],
     );

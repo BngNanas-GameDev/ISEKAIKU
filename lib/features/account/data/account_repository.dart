@@ -23,6 +23,18 @@ class AccountRepository {
         .eq('id', userId);
   }
 
+  /// Isi tanggal lahir sekali. Server menolak perubahan berikutnya.
+  Future<void> updateBirthDate(String userId, DateTime date) async {
+    final String month = date.month.toString().padLeft(2, '0');
+    final String day = date.day.toString().padLeft(2, '0');
+    final String value = "${date.year.toString().padLeft(4, '0')}-$month-$day";
+
+    await _client
+        .from('profiles')
+        .update(<String, dynamic>{'birth_date': value})
+        .eq('id', userId);
+  }
+
   Future<ProfileStats> stats(String userId) async {
     final followers = await _followIds(
       select: 'follower_id',
@@ -114,7 +126,7 @@ class AccountRepository {
     try {
       rows = await _client
           .from('profiles')
-          .select('id, username, bio, avatar_url')
+          .select('id, username, bio, avatar_url, birth_date')
           .inFilter('id', ids);
     } on PostgrestException {
       rows = await _client

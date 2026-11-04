@@ -1,10 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isekaiku/core/storage/storage_service.dart';
-import 'package:isekaiku/core/theme/app_theme.dart';
 import 'package:isekaiku/features/manga/data/adult_policy.dart';
 import 'package:isekaiku/features/manga/manga_providers.dart';
-import 'package:isekaiku/features/manga/presentation/widgets/adult_age_gate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -15,8 +12,9 @@ void main() {
   });
 
   group('usia minimum', () {
-    test('ambang kebijakan adalah 18 tahun', () {
+    test('konten 18+, aplikasi 13+', () {
       expect(AdultPolicy.minimumAge, 18);
+      expect(AdultPolicy.appMinimumAge, 13);
     });
 
     test('hari ulang tahun ke-18 dihitung sudah dewasa', () {
@@ -40,6 +38,13 @@ void main() {
 
       expect(AdultPolicy.isAdult(birth, now: DateTime(2026, 2, 28)), isFalse);
       expect(AdultPolicy.isAdult(birth, now: DateTime(2026, 3, 1)), isTrue);
+    });
+
+    test('di bawah 13 tahun tidak boleh memakai aplikasi', () {
+      final now = DateTime(2026, 11, 4);
+
+      expect(AdultPolicy.canUseApp(DateTime(2015, 1, 1), now: now), isFalse);
+      expect(AdultPolicy.canUseApp(DateTime(2013, 11, 4), now: now), isTrue);
     });
 
     test('tanggal lahir di masa depan tidak lolos', () {
@@ -74,54 +79,22 @@ void main() {
       expect(notifier.state, isFalse);
     });
 
-    test('enable menyimpan status dan waktu verifikasi', () async {
+    test('enable dan disable tersimpan', () async {
       final storage = await StorageService.create();
       final notifier = AdultContentNotifier(storage);
 
       notifier.enable();
-
       expect(notifier.state, isTrue);
       expect(storage.getBool(catalogAdultKey), isTrue);
-      expect(storage.getString(catalogAdultSinceKey), isNotEmpty);
-    });
 
-    test('disable menghapus status dan waktu verifikasi', () async {
-      final storage = await StorageService.create();
-      final notifier = AdultContentNotifier(storage);
-
-      notifier.enable();
       notifier.disable();
-
-      expect(notifier.state, isFalse);
-      expect(storage.getBool(catalogAdultKey), isFalse);
-      expect(storage.getString(catalogAdultSinceKey), isEmpty);
-    });
-
-    test('verifikasi lebih dari 30 hari otomatis mati', () async {
-      final old = DateTime.now()
-          .subtract(adultVerificationTtl + const Duration(days: 1))
-          .toUtc()
-          .toIso8601String();
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        catalogAdultKey: true,
-        catalogAdultSinceKey: old,
-      });
-
-      final storage = await StorageService.create();
-      final notifier = AdultContentNotifier(storage);
-
       expect(notifier.state, isFalse);
       expect(storage.getBool(catalogAdultKey), isFalse);
     });
 
-    test('verifikasi dalam 30 hari tetap aktif', () async {
-      final recent = DateTime.now()
-          .subtract(const Duration(days: 10))
-          .toUtc()
-          .toIso8601String();
+    test('tidak ada masa berlaku: flag tetap aktif setelah 31 hari', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         catalogAdultKey: true,
-        catalogAdultSinceKey: recent,
       });
 
       final storage = await StorageService.create();
@@ -129,89 +102,16 @@ void main() {
 
       expect(notifier.state, isTrue);
     });
-  });
 
-  group('gerbang usia', () {
-    Future<void> openGate(WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: appDarkTheme(),
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () => showAdultAgeGate(context),
-                child: const Text('buka gerbang'),
-              ),
-            ),
-          ),
-        ),
-      );
+    test('kunci lama cap waktu dibersihkan', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'catalog.adultSince': '2026-11-04T00:00:00Z',
+      });
 
-      await tester.tap(find.text('buka gerbang'));
-      await tester.pumpAndSettle();
+      final storage = await StorageService.create();
+      AdultContentNotifier(storage);
 
-      final fields = find.byType(TextField);
-      await tester.enterText(fields.at(0), '1');
-      await tester.enterText(fields.at(1), '1');
-    }
-
-    testWidgets('menolak usia di bawah 18', (tester) async {
-      await openGate(tester);
-
-      final fields = find.byType(TextField);
-      await tester.enterText(fields.at(2), '2015');
-      await tester.tap(find.text('Verifikasi'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('belum 18'), findsOneWidget);
-      // Dialog masih terbuka, belum ada hasil.
-      expect(find.text('Verifikasi'), findsOneWidget);
-    });
-
-    testWidgets('menolak tanggal tidak valid', (tester) async {
-      await openGate(tester);
-
-      final fields = find.byType(TextField);
-      await tester.enterText(fields.at(0), '31');
-      await tester.enterText(fields.at(1), '2');
-      await tester.enterText(fields.at(2), '2000');
-      await tester.tap(find.text('Verifikasi'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Tanggal lahir tidak valid.'), findsOneWidget);
-    });
-
-    testWidgets('menerima usia 18+ dan menutup dialog', (tester) async {
-      bool? result;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: appDarkTheme(),
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () async {
-                  result = await showAdultAgeGate(context);
-                },
-                child: const Text('buka gerbang'),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('buka gerbang'));
-      await tester.pumpAndSettle();
-
-      final fields = find.byType(TextField);
-      await tester.enterText(fields.at(0), '1');
-      await tester.enterText(fields.at(1), '1');
-      await tester.enterText(fields.at(2), '2000');
-      await tester.tap(find.text('Verifikasi'));
-      await tester.pumpAndSettle();
-
-      expect(result, isTrue);
-      expect(find.text('Verifikasi'), findsNothing);
+      expect(storage.getString('catalog.adultSince'), isEmpty);
     });
   });
 }

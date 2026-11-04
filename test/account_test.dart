@@ -46,6 +46,27 @@ void main() {
       );
     });
 
+    test('tanggal lahir terbaca dari profil', () {
+      final profile = UserProfile.tryFromRow(<String, dynamic>{
+        'id': 'u1',
+        'username': 'budi',
+        'birth_date': '2000-01-02',
+      });
+
+      expect(profile!.birthDate, DateTime(2000, 1, 2));
+      expect(profile.hasBirthDate, isTrue);
+      expect(profile.birthDateKnown, isTrue);
+    });
+
+    test('kolom tanggal lahir belum ada ditandai tidak diketahui', () {
+      final profile = UserProfile.tryFromRow(<String, dynamic>{
+        'id': 'u1',
+        'username': 'budi',
+      });
+
+      expect(profile!.birthDateKnown, isFalse);
+    });
+
     test('statistik kosong bernilai nol', () {
       expect(ProfileStats.empty.followers, 0);
       expect(ProfileStats.empty.following, 0);

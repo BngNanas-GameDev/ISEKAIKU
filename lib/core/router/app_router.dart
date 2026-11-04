@@ -6,6 +6,7 @@ import '../../features/donate/presentation/donate_page.dart';
 import '../../features/forum/presentation/forum_compose_page.dart';
 import '../../features/forum/presentation/forum_page.dart';
 import '../../features/forum/presentation/forum_thread_page.dart';
+import '../../features/legal/presentation/legal_pages.dart';
 import '../../features/library/presentation/library_page.dart';
 import '../../features/manga/presentation/browse_page.dart';
 import '../../features/manga/presentation/home_page.dart';
@@ -76,5 +77,13 @@ final appRouter = GoRouter(
       builder: (context, state) => const IsekaikuDesignSystemPreview(),
     ),
     GoRoute(path: '/donate', builder: (context, state) => const DonatePage()),
+    GoRoute(
+      path: '/legal/terms',
+      builder: (context, state) => const TermsPage(),
+    ),
+    GoRoute(
+      path: '/legal/privacy',
+      builder: (context, state) => const PrivacyPage(),
+    ),
   ],
 );

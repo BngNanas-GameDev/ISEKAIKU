@@ -14,17 +14,20 @@ Aplikasi memakai **18 tahun**, bukan 21.
 
 ## 2. Aturan katalog
 
-1. **Bawaan mati.** Tanpa verifikasi, aplikasi hanya meminta rating `safe` dan
+1. **Bawaan mati.** Tanpa aktivasi, aplikasi hanya meminta rating `safe` dan
    `suggestive` ke MangaDex.
-2. **Aktif hanya lewat verifikasi tanggal lahir** di
-   **Pustaka → ⋮ → Konten 18+ (Erotika)**.
-3. **Hanya `erotica` yang dibuka.** Rating `pornographic` **tidak pernah**
+2. **Tanggal lahir diisi sekali setelah login.** Formulir sengaja netral
+   (menyesuaikan pengalaman sesuai usia) dan tidak menyebut jenis konten.
+   Tanggal lahir disimpan di profil dan **tidak dapat diubah** setelah
+   disimpan — dijaga trigger server (`0004_birth_date.sql`).
+3. **Aktif hanya lewat** **Pustaka → ⋮ → Konten 18+ (Erotika)**. Syaratnya:
+   sudah login, tanggal lahir tersimpan, dan usia ≥ 18 tahun.
+4. **Hanya `erotica` yang dibuka.** Rating `pornographic` **tidak pernah**
    diminta ke MangaDex dan tidak ditampilkan aplikasi.
-4. **Verifikasi berlaku 30 hari**, lalu otomatis mati dan harus diulang.
-5. **Tanggal lahir tidak disimpan** dan tidak dikirim ke server. Yang
-   disimpan hanya status verifikasi + waktunya, di perangkat.
-6. **Bisa dimatikan kapan saja**; status dan waktu verifikasi langsung
-   dihapus.
+5. **Tidak ada masa berlaku.** Usia dihitung ulang dari tanggal lahir, jadi
+   akses 18+ tidak perlu diverifikasi ulang setiap 30 hari.
+6. **Bisa dimatikan kapan saja.** Keluar dari akun otomatis mematikan akses
+   18+.
 7. Judul erotika diberi lencana **18+** di kartu dan halaman detail.
 
 ## 3. Aturan forum (UGC)
@@ -47,8 +50,10 @@ Aplikasi memakai **18 tahun**, bukan 21.
 - Jangan menaruh konten 18+ di tangkapan layar/ikon/deskripsi toko.
 - Kebijakan Google Play melarang **pornografi**; karena itu rating
   `pornographic` tidak pernah diminta aplikasi.
-- Sediakan kebijakan privasi yang menyebut pemrosesan tanggal lahir (di sini:
-  tidak disimpan) dan data akun/forum.
+- Sediakan kebijakan privasi yang menyebut pemrosesan tanggal lahir
+  (disimpan sekali di profil, tidak dapat diubah) dan data akun/forum.
+- Minta persetujuan Syarat Layanan & Kebijakan Privasi sebelum aplikasi
+  dipakai (lihat `lib/features/legal`).
 
 ## 5. Rujukan
 

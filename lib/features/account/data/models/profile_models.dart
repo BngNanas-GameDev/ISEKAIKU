@@ -7,12 +7,23 @@ class UserProfile {
     required this.username,
     this.bio = '',
     this.avatarUrl,
+    this.birthDate,
+    this.birthDateKnown = true,
   });
 
   final String id;
   final String username;
   final String bio;
   final String? avatarUrl;
+
+  /// Tanggal lahir (sekali isi, tidak bisa diubah).
+  final DateTime? birthDate;
+
+  /// False bila kolom `birth_date` belum ada di server (migrasi belum jalan),
+  /// sehingga aplikasi tidak memaksa pengisian yang pasti gagal.
+  final bool birthDateKnown;
+
+  bool get hasBirthDate => birthDate != null;
 
   String get displayName =>
       username.trim().isEmpty ? 'Pengguna Isekaiku' : username.trim();
@@ -25,6 +36,7 @@ class UserProfile {
     final dynamic username = row['username'];
     final dynamic bio = row['bio'];
     final dynamic avatar = row['avatar_url'];
+    final dynamic birth = row['birth_date'];
 
     return UserProfile(
       id: id,
@@ -33,6 +45,8 @@ class UserProfile {
       avatarUrl: avatar is String && avatar.trim().isNotEmpty
           ? avatar.trim()
           : null,
+      birthDate: birth is String ? DateTime.tryParse(birth) : null,
+      birthDateKnown: row.containsKey('birth_date'),
     );
   }
 }

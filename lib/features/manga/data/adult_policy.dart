@@ -13,6 +13,9 @@ abstract class AdultPolicy {
   /// Usia minimum untuk membuka konten Erotika.
   static const int minimumAge = 18;
 
+  /// Usia minimum untuk memakai aplikasi.
+  static const int appMinimumAge = 13;
+
   /// Batas atas tahun lahir yang masih masuk akal.
   static const int maxAgeYears = 120;
 
@@ -50,5 +53,10 @@ abstract class AdultPolicy {
   /// True bila sudah memenuhi [minimumAge].
   static bool isAdult(DateTime birthDate, {DateTime? now}) {
     return ageOn(birthDate, now: now) >= minimumAge;
+  }
+
+  /// True bila memenuhi [appMinimumAge].
+  static bool canUseApp(DateTime birthDate, {DateTime? now}) {
+    return ageOn(birthDate, now: now) >= appMinimumAge;
   }
 }

@@ -22,6 +22,7 @@ dan tanpa internet. Supabase hanya lapisan tambahan.
 2. Salin seluruh isi `supabase/migrations/0001_schema.sql` → **Run**
 3. Salin seluruh isi `supabase/migrations/0002_forum.sql` → **Run**
 4. Salin seluruh isi `supabase/migrations/0003_profile_social.sql` → **Run**
+5. Salin seluruh isi `supabase/migrations/0004_birth_date.sql` → **Run**
 
 Skrip pertama membuat:
 
@@ -55,6 +56,15 @@ Skrip ketiga (`0003_profile_social.sql`) menambah fitur profil:
 | `profiles.avatar_url` | foto profil (opsional) |
 | `forum_threads.manga_*` | manga yang dilampirkan pada topik Rekomendasi |
 | `user_follows` | pengikut / mengikuti antar pengguna |
+
+Skrip keempat (`0004_birth_date.sql`) menambah `profiles.birth_date` dengan
+trigger yang membuat tanggal lahir:
+
+- wajib diisi sekali setelah login (lewat aplikasi),
+- **tidak bisa diubah/dikosongkan** setelah tersimpan,
+- minimal usia 13 tahun dan maksimal 120 tahun.
+
+Status 18+ dihitung dari tanggal lahir, jadi tidak pernah kedaluwarsa.
 
 Halaman **Akun** menampilkan foto profil (dari Google), bio, jumlah manga
 dibaca, pengikut, mengikuti, dan daftar thread yang pernah ditulis.
