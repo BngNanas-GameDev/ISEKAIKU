@@ -16,12 +16,7 @@
 ///   (mis. "jual", "stok", "order").
 library;
 
-enum ModerationViolation {
-  invalid,
-  externalLink,
-  gambling,
-  drugs,
-}
+enum ModerationViolation { invalid, externalLink, gambling, drugs }
 
 class ModerationResult {
   const ModerationResult._({
@@ -38,11 +33,11 @@ class ModerationResult {
     String message, {
     String? matched,
   }) : this._(
-          allowed: false,
-          violation: violation,
-          message: message,
-          matched: matched,
-        );
+         allowed: false,
+         violation: violation,
+         message: message,
+         matched: matched,
+       );
 
   final bool allowed;
   final ModerationViolation? violation;
@@ -146,7 +141,13 @@ class ContentModeration {
   ];
 
   /// Periksa [text]. `allowed == false` berarti harus ditolak.
-  static ModerationResult check(String text) {
+  ///
+  /// [maxLength] bisa diperbesar untuk forum (topik/balasan lebih panjang
+  /// dari komentar). Nilai bawaan tetap batas komentar.
+  static ModerationResult check(
+    String text, {
+    int maxLength = ContentModeration.maxLength,
+  }) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
       return const ModerationResult.blocked(
@@ -155,9 +156,11 @@ class ContentModeration {
       );
     }
     if (trimmed.length > maxLength) {
-      return const ModerationResult.blocked(
+      return ModerationResult.blocked(
         ModerationViolation.invalid,
-        messageTooLong,
+        maxLength == ContentModeration.maxLength
+            ? messageTooLong
+            : 'Teks terlalu panjang (maksimum $maxLength karakter).',
       );
     }
 

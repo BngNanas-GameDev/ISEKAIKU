@@ -121,6 +121,9 @@ lib/
   features/
     manga/                # M1: browse, search, detail, reader
     library/              # M2: Pustaka (diikuti + riwayat), model & store lokal
+    forum/                # M7: forum komunitas (topik, balasan, laporan)
+    account/              # dialog akun Google
+    donate/               # halaman dukungan
   sources/                # (M3+) VideoSourceProvider
 assets/
   fonts/                  # 5 file Asimov + LICENSE + NOTICE
@@ -189,10 +192,15 @@ Manga-first sampai rilis. Anime ditunda sampai aplikasi terbukti dipakai.
       urutan), riwayat pencarian, urutkan Pustaka (terbaru / A–Z), tandai
       semua chapter terbaca
       (catatan: filter Pustaka berdasarkan status baca belum dibuat)
+- [x] M4b Konten 18+: opt-in "Konten 18+" di menu Pustaka untuk judul
+      rating Erotika/Dewasa (bawaan mati; pencarian tidak lagi menyembunyikan
+      judul yang belum punya chapter di bahasa aktif)
 - [ ] M5 Rilis: skeleton/empty state, hemat data, lokalisasi, ikon adaptif,
       splash, release signing, QA
-- [ ] M6 (pasca-rilis) Akun Supabase + sinkronisasi Pustaka
-- [ ] M7 (pasca-rilis) Komentar/forum per manga
+- [x] M6 Akun Supabase + sinkronisasi Pustaka (Google OAuth, tombstone)
+- [x] M7 Forum komunitas in-app: topik + balasan + kategori, lapor, moderasi
+      server (`supabase/migrations/0002_forum.sql`)
+- [ ] M7b Komentar per manga (memakai tabel `comments` yang sudah ada)
 - [ ] M8 (ditunda) Anime: koleksi lokal, provider video, player media_kit
 
 ### Dibatalkan
@@ -201,14 +209,20 @@ Manga-first sampai rilis. Anime ditunda sampai aplikasi terbukti dipakai.
   Supabase (kuota free tier 1 GB), dan akses lewat SAF/Drive terlalu lambat
   untuk volume ratusan halaman. Fokus katalog tetap di MangaDex.
 
-## Akun & sinkronisasi (persiapan)
+## Akun, sinkronisasi & forum (persiapan)
 
-Skema backend opsional ada di `supabase/migrations/0001_schema.sql`: profil,
-Pustaka, progres baca, chapter terbaca, komentar, laporan, dan blokir —
-lengkap dengan **RLS** dan **trigger moderasi** server-side.
+Skema backend opsional ada di:
 
-Panduan langkah demi langkah (login Google, SHA-1 debug/release, dan
-keep-alive free tier lewat cron-job.org): `docs/supabase-setup.md`.
+- `supabase/migrations/0001_schema.sql` — profil, Pustaka, progres baca,
+  chapter terbaca, komentar per manga, laporan, dan blokir.
+- `supabase/migrations/0002_forum.sql` — forum komunitas (`forum_threads`,
+  `forum_posts`, `forum_reports`) beserta trigger moderasi.
+
+Semuanya lengkap dengan **RLS** dan **trigger moderasi** server-side.
+
+Panduan langkah demi langkah (login Google, SHA-1 debug/release, moderasi
+forum, dan keep-alive free tier lewat cron-job.org):
+`docs/supabase-setup.md`.
 
 Aplikasi tetap **local-first**: tanpa login, semua fitur baca tetap jalan.
 

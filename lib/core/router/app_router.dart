@@ -2,6 +2,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/iseakaiku_wordmark.dart';
 import '../../features/donate/presentation/donate_page.dart';
+import '../../features/forum/presentation/forum_compose_page.dart';
+import '../../features/forum/presentation/forum_page.dart';
+import '../../features/forum/presentation/forum_thread_page.dart';
 import '../../features/library/presentation/library_page.dart';
 import '../../features/manga/presentation/browse_page.dart';
 import '../../features/manga/presentation/home_page.dart';
@@ -12,24 +15,21 @@ import 'shell_page.dart';
 
 /// Rute aplikasi.
 ///
-/// - `/` beranda (tab Beranda/Cari/Pustaka)
+/// - `/` beranda (tab Beranda/Cari/Pustaka/Forum)
 /// - `/manga/:id` detail manga
 /// - `/manga/:id/read/:chapterId?title=&number=` reader
+/// - `/forum` daftar topik, `/forum/new` tulis, `/forum/:threadId` detail
 final appRouter = GoRouter(
   initialLocation: '/',
   routes: <RouteBase>[
     ShellRoute(
       builder: (context, state, child) => ShellPage(child: child),
       routes: <RouteBase>[
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const HomePage(),
-        ),
+        GoRoute(path: '/', builder: (context, state) => const HomePage()),
         GoRoute(
           path: '/search',
-          builder: (context, state) => SearchPage(
-            initialQuery: state.uri.queryParameters['q'] ?? '',
-          ),
+          builder: (context, state) =>
+              SearchPage(initialQuery: state.uri.queryParameters['q'] ?? ''),
         ),
         GoRoute(
           path: '/browse',
@@ -39,7 +39,17 @@ final appRouter = GoRouter(
           path: '/library',
           builder: (context, state) => const LibraryPage(),
         ),
+        GoRoute(path: '/forum', builder: (context, state) => const ForumPage()),
       ],
+    ),
+    GoRoute(
+      path: '/forum/new',
+      builder: (context, state) => const ForumComposePage(),
+    ),
+    GoRoute(
+      path: '/forum/:threadId',
+      builder: (context, state) =>
+          ForumThreadPage(threadId: state.pathParameters['threadId']!),
     ),
     GoRoute(
       path: '/manga/:id',
@@ -53,17 +63,13 @@ final appRouter = GoRouter(
         chapterId: state.pathParameters['chapterId']!,
         chapterTitle: state.uri.queryParameters['title'] ?? '',
         chapterNumber: state.uri.queryParameters['number'] ?? '',
-        initialPage:
-            int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 0,
+        initialPage: int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 0,
       ),
     ),
     GoRoute(
       path: '/dev/design',
       builder: (context, state) => const IsekaikuDesignSystemPreview(),
     ),
-    GoRoute(
-      path: '/donate',
-      builder: (context, state) => const DonatePage(),
-    ),
+    GoRoute(path: '/donate', builder: (context, state) => const DonatePage()),
   ],
 );

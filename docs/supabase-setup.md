@@ -1,8 +1,8 @@
 # Setup Supabase (free tier)
 
-Panduan ini menyiapkan backend untuk **sinkronisasi Pustaka** dan **komentar**.
-Aplikasi tetap *local-first*: semua fitur baca jalan tanpa login dan tanpa
-internet. Supabase hanya lapisan tambahan.
+Panduan ini menyiapkan backend untuk **sinkronisasi Pustaka** dan **forum
+komunitas**. Aplikasi tetap *local-first*: semua fitur baca jalan tanpa login
+dan tanpa internet. Supabase hanya lapisan tambahan.
 
 > Jangan pernah menaruh `service_role` key di aplikasi. Yang dipakai klien
 > hanya `anon` key.
@@ -19,10 +19,10 @@ internet. Supabase hanya lapisan tambahan.
 ## 2. Jalankan skema
 
 1. Buka **SQL Editor** di dashboard
-2. Salin seluruh isi `supabase/migrations/0001_schema.sql`
-3. Klik **Run**
+2. Salin seluruh isi `supabase/migrations/0001_schema.sql` → **Run**
+3. Salin seluruh isi `supabase/migrations/0002_forum.sql` → **Run**
 
-Skrip itu membuat:
+Skrip pertama membuat:
 
 | Tabel | Isi |
 |---|---|
@@ -34,10 +34,20 @@ Skrip itu membuat:
 | `comment_reports` | laporan komentar |
 | `user_blocks` | daftar blokir |
 
-Semua tabel memakai **RLS**. Tanpa login, klien tidak bisa membaca data
-pengguna lain.
+Skrip kedua (`0002_forum.sql`) membuat forum:
 
-Skema juga memasang **trigger moderasi** di `comments` yang menolak:
+| Tabel | Isi |
+|---|---|
+| `forum_threads` | topik diskusi (judul, isi, kategori) |
+| `forum_posts` | balasan tiap topik |
+| `forum_reports` | laporan topik/balasan |
+
+Forum bisa **dibaca tanpa login**; menulis, melapor, dan menghapus milik
+sendiri wajib login Google. Kategori: `umum`, `rekomendasi`, `bantuan`,
+`offtopic`.
+
+Skema juga memasang **trigger moderasi** di `comments`, `forum_threads`, dan
+`forum_posts` yang menolak:
 
 - tautan eksternal (termasuk `[.]`)
 - kata kunci judi online
@@ -45,6 +55,35 @@ Skema juga memasang **trigger moderasi** di `comments` yang menolak:
 
 Ini lapisan server; filter di aplikasi (`lib/core/moderation`) hanya untuk
 umpan balik cepat.
+
+### Menyembunyikan konten (moderasi manual)
+
+Jalankan dari SQL Editor (bukan dari aplikasi — butuh `service_role`):
+
+```sql
+-- sembunyikan topik
+update public.forum_threads
+   set is_hidden = true, hidden_reason = 'spam'
+ where id = '<uuid>';
+
+-- sembunyikan balasan (reply_count otomatis menyesuaikan)
+update public.forum_posts
+   set is_hidden = true, hidden_reason = 'spam'
+ where id = '<uuid>';
+
+-- sematkan / kunci topik
+update public.forum_threads set is_pinned = true where id = '<uuid>';
+update public.forum_threads set is_locked = true where id = '<uuid>';
+```
+
+Lihat laporan yang masuk:
+
+```sql
+select r.created_at, r.target_type, r.target_id, r.reason, p.username
+  from public.forum_reports r
+  join public.profiles p on p.id = r.reporter_id
+ order by r.created_at desc;
+```
 
 ## 3. Ambil kredensial
 

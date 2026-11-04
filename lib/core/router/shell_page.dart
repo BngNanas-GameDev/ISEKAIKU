@@ -9,7 +9,12 @@ class ShellPage extends StatelessWidget {
 
   const ShellPage({super.key, required this.child});
 
-  static const List<String> _locations = <String>['/', '/search', '/library'];
+  static const List<String> _locations = <String>[
+    '/',
+    '/search',
+    '/library',
+    '/forum',
+  ];
 
   int _indexFor(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -41,10 +46,16 @@ class ShellPage extends StatelessWidget {
             destinations: const <NavigationDestination>[
               NavigationDestination(
                 icon: _AnimatedAssetIcon(
-                  frames: <String>['assets/Beranda/b1.png', 'assets/Beranda/b2.png'],
+                  frames: <String>[
+                    'assets/Beranda/b1.png',
+                    'assets/Beranda/b2.png',
+                  ],
                 ),
                 selectedIcon: _AnimatedAssetIcon(
-                  frames: <String>['assets/Beranda/b1.png', 'assets/Beranda/b2.png'],
+                  frames: <String>[
+                    'assets/Beranda/b1.png',
+                    'assets/Beranda/b2.png',
+                  ],
                   selected: true,
                 ),
                 label: 'Beranda',
@@ -61,13 +72,24 @@ class ShellPage extends StatelessWidget {
               ),
               NavigationDestination(
                 icon: _AnimatedAssetIcon(
-                  frames: <String>['assets/Pustaka/p1.png', 'assets/Pustaka/p2.png'],
+                  frames: <String>[
+                    'assets/Pustaka/p1.png',
+                    'assets/Pustaka/p2.png',
+                  ],
                 ),
                 selectedIcon: _AnimatedAssetIcon(
-                  frames: <String>['assets/Pustaka/p1.png', 'assets/Pustaka/p2.png'],
+                  frames: <String>[
+                    'assets/Pustaka/p1.png',
+                    'assets/Pustaka/p2.png',
+                  ],
                   selected: true,
                 ),
                 label: 'Pustaka',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.forum_outlined),
+                selectedIcon: Icon(Icons.forum, color: AppColors.primary),
+                label: 'Forum',
               ),
             ],
           ),
@@ -82,10 +104,7 @@ class ShellPage extends StatelessWidget {
 /// Tidak beranimasi berulang: frame 2 hanya saat tab aktif, frame 1 saat
 /// tidak aktif. Pergantiannya memakai cross-fade singkat.
 class _AnimatedAssetIcon extends StatelessWidget {
-  const _AnimatedAssetIcon({
-    required this.frames,
-    this.selected = false,
-  });
+  const _AnimatedAssetIcon({required this.frames, this.selected = false});
 
   final List<String> frames;
   final bool selected;
